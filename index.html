@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>wonderlab — the lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Fredoka:wght@500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* =========================================================
+     wonderlab — the lab room.
+     The page is a small research lab. A researcher stands at a
+     whiteboard. The visitor types a question or pulls one off
+     the corkboard. Every element has a place in the room.
+  ========================================================= */
+
+  :root {
+    --cream:       #FCF4E4;
+    --cream-dark:  #F4E8C9;
+    --cream-deep:  #ECDDB4;
+    --wall:        #F6E8C4;
+    --wall-trim:   #DCC58A;
+    --sky:         #B5DCEB;
+    --sky-deep:    #7CB7D0;
+    --sun:         #FFD16B;
+    --sun-deep:    #F4B942;
+    --sun-glow:    #FFE9A8;
+    --leaf:        #B8DFA0;
+    --leaf-deep:   #8BC678;
+    --peach:       #FFB7A8;
+    --pink:        #F8A5C2;
+    --rose:        #E58B82;
+    --wood:        #B98E62;
+    --wood-dark:   #7E5635;
+    --wood-deep:   #5C3F25;
+    --cork:        #C99767;
+    --cork-dark:   #A87645;
+    --board:       #FBFBF6;
+    --board-edge:  #D4C9B4;
+    --ink:         #2D2622;
+    --ink-soft:    #5C4A3F;
+    --shadow:      4px 4px 0 var(--ink);
+    --shadow-sm:   2px 2px 0 var(--ink);
+    --shadow-lg:   6px 6px 0 var(--ink);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--wall);
+    color: var(--ink);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 600;
+    line-height: 1.5;
+    min-height: 100vh;
+    overflow-x: hidden;
+    /* the wall — soft wallpaper of paper-pulp dots */
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,.35) 0 1px, transparent 1px),
+      radial-gradient(circle at 70% 60%, rgba(220,197,138,.30) 0 1px, transparent 1px),
+      radial-gradient(circle at 40% 80%, rgba(255,255,255,.25) 0 1px, transparent 1px);
+    background-size: 28px 28px, 36px 36px, 22px 22px;
+    background-position: 0 0, 14px 18px, 4px 9px;
+  }
+
+  /* fine grain across everything */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.06;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* =========================================================
+     ROOM LAYOUT
+  ========================================================= */
+  .room {
+    position: relative;
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 0 2.2rem 4rem;
+    z-index: 2;
+  }
+
+  /* the sign on the wall (wordmark) */
+  .room-sign {
+    position: relative;
+    z-index: 5;
+    padding: 1.3rem 0 0.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .wordmark {
+    font-family: 'Bagel Fat One', cursive;
+    font-size: 1.85rem;
+    letter-spacing: -1px;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.05em;
+    background: var(--cream);
+    border: 2.5px solid var(--ink);
+    border-radius: 14px;
+    padding: 0.35rem 0.95rem 0.45rem;
+    box-shadow: var(--shadow-sm);
+    transform: rotate(-1.5deg);
+  }
+  .wordmark .w1 { color: var(--ink); }
+  .wordmark .w2 { color: var(--sky-deep); }
+  .wordmark .w3 { color: var(--rose); margin-left: 0.05em; font-size: 0.8em; }
+
+  .room-tag {
+    font-family: 'Caveat', cursive;
+    font-size: 1.35rem;
+    color: var(--ink-soft);
+    transform: rotate(1deg);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .room-tag::before {
+    content: '';
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #ED4F4F;
+    box-shadow: 0 0 0 2px var(--ink), 0 0 14px 3px rgba(237,79,79,.55);
+    animation: pulseDot 2.6s ease-in-out infinite;
+  }
+  @keyframes pulseDot {
+    0%, 100% { box-shadow: 0 0 0 2px var(--ink), 0 0 10px 2px rgba(237,79,79,.45); }
+    50%      { box-shadow: 0 0 0 2px var(--ink), 0 0 18px 5px rgba(237,79,79,.85); }
+  }
+
+  /* =========================================================
+     WALL — researcher + whiteboard + posters + lamp + clock
+  ========================================================= */
+  .wall {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) 1fr;
+    gap: 2.2rem;
+    align-items: end;
+    padding: 5rem 0 0;
+    margin-top: 0.6rem;
+  }
+
+  /* posters scattered across the wall, behind the action */
+  .wall-posters {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .poster {
+    position: absolute;
+    background: white;
+    border: 2.2px solid var(--ink);
+    border-radius: 6px;
+    padding: 0.5rem 0.55rem 0.4rem;
+    box-shadow: var(--shadow-sm);
+    transform: rotate(var(--rot, 0deg));
+    pointer-events: auto;
+  }
+  .poster::before {
+    /* thumbtack */
+    content: '';
+    position: absolute;
+    top: -7px; left: 50%;
+    transform: translateX(-50%);
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ff8e7a 0 35%, #d24a35 60%, #8a2d1f 100%);
+    border: 1.8px solid var(--ink);
+    box-shadow: 0 1px 0 var(--ink);
+  }
+  .poster svg { display: block; }
+  .poster figcaption {
+    font-family: 'Caveat', cursive;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-top: 0.15rem;
+    line-height: 1;
+  }
+  .poster.p-protein   { top: 0.4rem;  left: 4%;  --rot: -4deg; }
+  .poster.p-stell     { top: 0.2rem;  left: 28%; --rot: 3deg; }
+  .poster.p-anti      { top: 0.6rem;  right: 14%; --rot: -2deg; }
+  .poster.p-table     { display: none; } /* available but hidden by default */
+
+  /* clock */
+  .wall-clock {
+    position: absolute;
+    top: 0.6rem;
+    right: 1.4rem;
+    width: 78px; height: 78px;
+    border-radius: 50%;
+    background: white;
+    border: 2.5px solid var(--ink);
+    box-shadow: var(--shadow-sm);
+    z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    transform: rotate(-2deg);
+  }
+
+  /* =========================================================
+     RESEARCHER COLUMN
+  ========================================================= */
+  .researcher-col {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding-bottom: 0;
+  }
+
+  .researcher-bubble {
+    position: relative;
+    background: white;
+    border: 2.5px solid var(--ink);
+    border-radius: 22px;
+    padding: 0.95rem 1.15rem 0.95rem;
+    box-shadow: var(--shadow);
+    max-width: 290px;
+    min-height: 64px;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 500;
+    font-size: 1rem;
+    line-height: 1.4;
+    color: var(--ink);
+    margin-bottom: 0.4rem;
+    transform: rotate(-0.6deg);
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+  .researcher-bubble.is-thinking::after {
+    content: '...';
+    display: inline-block;
+    margin-left: 0.2rem;
+    letter-spacing: 0.2em;
+    animation: dots 1.4s steps(3, end) infinite;
+  }
+  @keyframes dots {
+    0% { opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { opacity: 0.3; }
+  }
+  .researcher-bubble::before {
+    /* tail */
+    content: '';
+    position: absolute;
+    bottom: -16px;
+    left: 36%;
+    width: 22px; height: 22px;
+    background: white;
+    border-right: 2.5px solid var(--ink);
+    border-bottom: 2.5px solid var(--ink);
+    transform: rotate(45deg);
+  }
+  .researcher-bubble .who {
+    display: block;
+    font-family: 'Caveat', cursive;
+    font-size: 1.05rem;
+    color: var(--ink-soft);
+    margin-bottom: 0.15rem;
+    font-weight: 700;
+  }
+  .researcher-bubble.pop {
+    animation: bubblePop .55s cubic-bezier(.5,1.6,.4,1);
+  }
+  @keyframes bubblePop {
+    0%   { transform: rotate(-0.6deg) scale(.92); }
+    60%  { transform: rotate(-0.6deg) scale(1.04); }
+    100% { transform: rotate(-0.6deg) scale(1); }
+  }
+
+  .researcher-figure {
+    width: 100%;
+    max-width: 270px;
+    height: auto;
+    margin-top: 0.4rem;
+    filter: drop-shadow(3px 4px 0 var(--ink-soft));
+    animation: idleBob 4.2s ease-in-out infinite;
+  }
+  @keyframes idleBob {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50%      { transform: translateY(-3px) rotate(-0.4deg); }
+  }
+  .researcher-figure .marker-arm {
+    transform-origin: 180px 178px;
+    transform-box: view-box;
+    animation: writeArm 4s ease-in-out infinite;
+  }
+  @keyframes writeArm {
+    0%, 100% { transform: rotate(-3deg); }
+    35%      { transform: rotate(6deg); }
+    65%      { transform: rotate(-1deg); }
+  }
+
+  .researcher-name {
+    font-family: 'Caveat', cursive;
+    font-size: 1.15rem;
+    color: var(--ink-soft);
+    margin-top: 0.2rem;
+    text-align: center;
+  }
+  .researcher-name span {
+    background: var(--sun);
+    border: 2px solid var(--ink);
+    border-radius: 100px;
+    padding: 0.1rem 0.7rem 0.15rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* =========================================================
+     WHITEBOARD COLUMN
+  ========================================================= */
+  .board-col {
+    position: relative;
+    z-index: 2;
+  }
+
+  .lamp {
+    position: absolute;
+    top: -4.2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 220px;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .lamp svg { display: block; width: 100%; height: auto; }
+
+  /* warm lamp glow on the whiteboard */
+  .lamp-glow {
+    position: absolute;
+    top: 1.1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 80%;
+    background: radial-gradient(ellipse at 50% 0%,
+      rgba(255,233,168,.85) 0%,
+      rgba(255,233,168,.35) 35%,
+      rgba(255,233,168,0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 3;
+    mix-blend-mode: multiply;
+    animation: lampFlicker 7s ease-in-out infinite;
+  }
+  @keyframes lampFlicker {
+    0%, 100% { opacity: 0.95; }
+    47%      { opacity: 1.00; }
+    51%      { opacity: 0.88; }
+    53%      { opacity: 1.00; }
+  }
+
+  /* the question scribbled at the top of the board */
+  .scene-question-wrap {
+    position: relative;
+    margin: 0 auto 0.7rem;
+    text-align: center;
+    z-index: 3;
+  }
+  #scene-question {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: clamp(1.5rem, 2.4vw, 2.05rem);
+    color: var(--ink);
+    line-height: 1.15;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    transform: rotate(-0.6deg);
+  }
+  #scene-question::before { content: '“'; color: var(--rose); margin-right: 0.05em; }
+  #scene-question::after  { content: '”'; color: var(--rose); margin-left: 0.05em; }
+
+  /* whiteboard frame */
+  .whiteboard {
+    position: relative;
+    margin: 0 auto;
+    background: linear-gradient(180deg, #E8DDC2, #D9C9A6);
+    border: 2.8px solid var(--ink);
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow:
+      0 0 0 2px var(--cream-deep) inset,
+      var(--shadow-lg);
+    max-width: 880px;
+  }
+  /* wood grain on frame */
+  .whiteboard::before {
+    content: '';
+    position: absolute; inset: 4px;
+    border-radius: 16px;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(90deg,
+        rgba(94,69,42,.08) 0 1px,
+        transparent 1px 9px),
+      repeating-linear-gradient(90deg,
+        rgba(94,69,42,.05) 0 2px,
+        transparent 2px 26px);
+    mix-blend-mode: multiply;
+  }
+  /* screws in corners */
+  .screw {
+    position: absolute;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 35% 30%, #b9b3a1 0 30%, #6f6750 60%, #423c2c 100%);
+    border: 1.8px solid var(--ink);
+    z-index: 4;
+  }
+  .screw::after {
+    content: '';
+    position: absolute; inset: 30%;
+    background: linear-gradient(45deg, transparent 45%, var(--ink) 45% 55%, transparent 55%);
+  }
+  .screw.tl { top: 6px;  left: 6px; }
+  .screw.tr { top: 6px;  right: 6px; }
+  .screw.bl { bottom: 6px; left: 6px; }
+  .screw.br { bottom: 6px; right: 6px; }
+
+  /* board surface */
+  .whiteboard-surface {
+    position: relative;
+    background: var(--board);
+    border: 2px solid var(--board-edge);
+    border-radius: 10px;
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.6),
+                inset 0 -2px 8px rgba(140,116,80,.18);
+  }
+
+  #splat-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+    background:
+      radial-gradient(circle at 30% 22%, #ffffff 0%, #FCEFD2 45%, #F4D9A0 100%);
+  }
+  #splat-canvas:active { cursor: grabbing; }
+
+  /* status pill on the whiteboard */
+  .board-overlay {
+    position: absolute;
+    top: 0.85rem; left: 0.85rem;
+    display: flex; flex-direction: column; gap: 0.4rem;
+    z-index: 3;
+    pointer-events: none;
+  }
+  #splat-status {
+    background: white;
+    border: 2px solid var(--ink);
+    border-radius: 100px;
+    padding: 0.32rem 0.85rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    box-shadow: var(--shadow-sm);
+    width: fit-content;
+    transform: rotate(-2deg);
+  }
+  #splat-status[data-kind="error"] { background: var(--peach); }
+  #splat-status[data-kind="ok"]    { background: var(--leaf); }
+
+  /* scribbled "live" tag on board */
+  .board-live-tag {
+    position: absolute;
+    top: 0.85rem;
+    right: 0.95rem;
+    font-family: 'Caveat', cursive;
+    font-size: 1.05rem;
+    color: var(--rose);
+    transform: rotate(3deg);
+    pointer-events: none;
+    z-index: 3;
+  }
+  .board-live-tag::before {
+    content: '';
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--rose);
+    margin-right: 0.3rem;
+    vertical-align: middle;
+    animation: pulseDot 2s ease-in-out infinite;
+  }
+
+  /* aha popup */
+  #scene-aha {
+    position: absolute;
+    left: 50%;
+    bottom: 1.1rem;
+    transform: translate(-50%, 0.6rem);
+    background: var(--sun);
+    border: 2.5px solid var(--ink);
+    border-radius: 18px;
+    padding: 0.7rem 1.1rem;
+    max-width: 78%;
+    box-shadow: var(--shadow);
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 1.35;
+    z-index: 4;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  #scene-aha.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  #scene-aha::before {
+    content: '✦';
+    color: var(--rose);
+    margin-right: 0.35rem;
+  }
+
+  /* marker tray */
+  .marker-tray {
+    position: relative;
+    margin-top: 14px;
+    background: linear-gradient(180deg, #C49565, #8B6240);
+    border: 2.4px solid var(--ink);
+    border-radius: 8px 8px 16px 16px;
+    padding: 14px 18px 16px;
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,.18),
+      inset 0 -3px 0 rgba(0,0,0,.18);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .markers {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .marker {
+    width: 80px; height: 18px;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    transform: rotate(var(--rot, -2deg));
+  }
+  .marker::after {
+    content: '';
+    position: absolute;
+    right: -6px; top: 3px;
+    width: 8px; height: 12px;
+    background: var(--ink-soft);
+    border: 2px solid var(--ink);
+    border-radius: 2px;
+  }
+  .marker.m-red   { background: #E66363; --rot: -3deg; }
+  .marker.m-blue  { background: #6BA3D9; --rot: 1deg; }
+  .marker.m-black { background: #3a342f; --rot: -1deg; }
+
+  /* zoom button + slider, sitting on the tray */
+  #scene-zoom {
+    appearance: none;
+    border: 2px solid var(--ink);
+    border-radius: 100px;
+    background: var(--sun);
+    padding: 0.5rem 1rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 0.92rem;
+    cursor: pointer;
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+    transition: transform .12s ease, box-shadow .12s ease;
+    margin-left: auto;
+  }
+  #scene-zoom:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+  #scene-zoom:active { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink); }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    background: var(--cream);
+    border: 2px solid var(--ink);
+    border-radius: 100px;
+    padding: 0.35rem 0.95rem;
+    box-shadow: var(--shadow-sm);
+    flex: 1 1 200px;
+    min-width: 200px;
+  }
+  #scene-slider-label {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 0.88rem;
+    white-space: nowrap;
+  }
+  #scene-slider {
+    flex: 1;
+    accent-color: var(--ink);
+    height: 18px;
+  }
+
+  /* =========================================================
+     DESK STRIP — mug, stack of papers, hint
+  ========================================================= */
+  .desk {
+    position: relative;
+    margin: 3rem 0 0;
+    height: 110px;
+    display: flex;
+    align-items: flex-end;
+    z-index: 2;
+  }
+  .desk-surface {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 28px;
+    background: linear-gradient(180deg, #B98E62 0%, #8B6240 100%);
+    border-top: 2.5px solid var(--ink);
+    border-bottom: 2.5px solid var(--ink);
+    box-shadow: 0 4px 0 var(--ink-soft) inset;
+  }
+  .desk-surface::after {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(90deg,
+        rgba(255,255,255,.06) 0 1px,
+        transparent 1px 10px),
+      repeating-linear-gradient(90deg,
+        rgba(40,25,10,.10) 0 2px,
+        transparent 2px 32px);
+    mix-blend-mode: overlay;
+  }
+  .desk-items {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 1.2rem;
+  }
+  .papers {
+    width: 80px; height: 70px;
+    transform: translateY(-2px);
+  }
+  .mug {
+    width: 70px; height: 78px;
+    transform: translateY(-2px);
+    position: relative;
+  }
+  .steam {
+    position: absolute;
+    top: -34px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 42px; height: 42px;
+    pointer-events: none;
+  }
+  .steam path {
+    fill: none;
+    stroke: rgba(255,255,255,.85);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    animation: steamRise 3s ease-in-out infinite;
+  }
+  .steam path:nth-child(2) { animation-delay: -1s; }
+  .steam path:nth-child(3) { animation-delay: -2s; }
+  @keyframes steamRise {
+    0%   { opacity: 0; transform: translateY(8px) scaleY(.5); }
+    30%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-12px) scaleY(1.2); }
+  }
+
+  .desk-note {
+    background: var(--sun);
+    border: 2.2px solid var(--ink);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+    font-family: 'Caveat', cursive;
+    font-size: 1rem;
+    color: var(--ink);
+    transform: rotate(-3deg) translateY(-22px);
+    box-shadow: var(--shadow-sm);
+    line-height: 1.1;
+  }
+  .desk-note b { color: var(--rose); font-weight: 700; }
+
+  /* =========================================================
+     LOWER ROOM — corkboard + chat notepad
+  ========================================================= */
+  .lower {
+    position: relative;
+    margin-top: 1.4rem;
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 2.2rem;
+    z-index: 2;
+  }
+
+  /* === CORKBOARD === */
+  .corkboard {
+    position: relative;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255,255,255,.12) 0 1px, transparent 1px),
+      radial-gradient(circle at 60% 40%, rgba(0,0,0,.06)    0 1px, transparent 1px),
+      radial-gradient(circle at 80% 70%, rgba(255,255,255,.10) 0 1px, transparent 1px),
+      linear-gradient(135deg, var(--cork) 0%, #B27D4D 100%);
+    background-size: 4px 4px, 5px 5px, 6px 6px, 100% 100%;
+    background-position: 0 0, 2px 1px, 1px 2px, 0 0;
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    padding: 1.6rem 1.2rem 1.4rem;
+    box-shadow:
+      var(--shadow-lg),
+      inset 0 0 0 4px rgba(168,118,69,.6),
+      inset 0 0 30px rgba(94,53,20,.35);
+    min-height: 440px;
+  }
+  .corkboard-header {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-bottom: 1rem;
+    padding: 0 0.4rem;
+  }
+  .corkboard-title {
+    font-family: 'Bagel Fat One', cursive;
+    font-size: 1.4rem;
+    letter-spacing: -0.5px;
+    color: var(--cream);
+    text-shadow: 2px 2px 0 var(--ink);
+  }
+  .corkboard-sub {
+    font-family: 'Caveat', cursive;
+    font-size: 1.05rem;
+    color: var(--cream-deep);
+    transform: rotate(-1deg);
+  }
+
+  #question-pinboard {
+    /*
+      Cards/sticky-notes get inserted by JS (src/main.js) from
+      researcher-questions.js. Each card carries data-qid.
+      Style is .sticky and .sticky.<color>; JS picks color/rot.
+    */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.3rem 1.1rem;
+    padding: 0.4rem 0.4rem 0.4rem;
+  }
+
+  .sticky {
+    position: relative;
+    background: var(--sun);
+    border: 2.4px solid var(--ink);
+    border-radius: 4px;
+    padding: 1rem 0.85rem 0.95rem;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transform: rotate(var(--rot, -2deg));
+    transition: transform .18s ease, box-shadow .18s ease;
+    font-family: 'Caveat', cursive;
+    font-size: 1.12rem;
+    line-height: 1.25;
+    color: var(--ink);
+  }
+  .sticky:hover {
+    transform: rotate(var(--rot, -2deg)) translate(-2px, -3px);
+    box-shadow: var(--shadow-lg);
+  }
+  .sticky:active {
+    transform: rotate(var(--rot, -2deg)) translate(2px, 2px);
+    box-shadow: var(--shadow-sm);
+  }
+  .sticky::before {
+    content: '';
+    position: absolute;
+    top: -8px; left: 50%;
+    transform: translateX(-50%);
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ff8e7a 0 30%, #d24a35 60%, #8a2d1f 100%);
+    border: 2px solid var(--ink);
+    box-shadow: 0 1px 0 var(--ink);
+  }
+  .sticky .badge {
+    display: inline-block;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--cream);
+    padding: 0.2rem 0.55rem;
+    border-radius: 100px;
+    margin-bottom: 0.6rem;
+  }
+  .sticky .by {
+    display: block;
+    margin-top: 0.55rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .sticky.peach { background: var(--peach); }
+  .sticky.leaf  { background: var(--leaf); }
+  .sticky.sky   { background: var(--sky); }
+  .sticky.pink  { background: var(--pink); }
+  .sticky.sun   { background: var(--sun); }
+
+  .pinboard-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-family: 'Caveat', cursive;
+    font-size: 1.2rem;
+    color: var(--cream-deep);
+    padding: 2.5rem 1rem;
+  }
+
+  /* === NOTEPAD (chat + answer) === */
+  .notepad {
+    position: relative;
+    background: var(--cream);
+    border: 2.8px solid var(--ink);
+    border-radius: 14px;
+    padding: 0;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 440px;
+  }
+  /* spiral binding */
+  .notepad::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 28px;
+    background: linear-gradient(180deg, #C49565, #8B6240);
+    border-bottom: 2.5px solid var(--ink);
+    z-index: 1;
+  }
+  .notepad::after {
+    content: '';
+    position: absolute;
+    top: 6px; left: 0; right: 0;
+    height: 16px;
+    background-image:
+      radial-gradient(circle, var(--ink) 0 4px, transparent 4.5px);
+    background-size: 28px 16px;
+    background-repeat: repeat-x;
+    z-index: 2;
+  }
+  .notepad-inner {
+    position: relative;
+    padding: 2.2rem 1.3rem 1.1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background:
+      linear-gradient(180deg,
+        rgba(255,255,255,0) 0%,
+        rgba(255,255,255,0) 30px,
+        #FCF4E4 30px,
+        #FCF4E4 100%),
+      repeating-linear-gradient(180deg,
+        transparent 0 28px,
+        rgba(149,182,213,.45) 28px 29px);
+    background-position: 0 0, 0 30px;
+    margin-top: 28px;
+  }
+  .notepad-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+    flex-wrap: wrap;
+  }
+  .nptab {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: var(--cream-dark);
+    color: var(--ink-soft);
+    border: 2px solid var(--ink);
+    border-radius: 100px;
+    padding: 0.25rem 0.7rem;
+    box-shadow: var(--shadow-sm);
+    transform: rotate(-1deg);
+  }
+  .nptab.active {
+    background: var(--leaf);
+    color: var(--ink);
+  }
+
+  /* answer card on the pad */
+  .answer-card {
+    background: white;
+    border: 2.2px solid var(--ink);
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 0.9rem;
+  }
+  #scene-answer-kid {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 500;
+    font-size: 1.02rem;
+    line-height: 1.45;
+    color: var(--ink);
+    margin: 0;
+  }
+  .answer-card details {
+    margin-top: 0.6rem;
+    border-top: 1.5px dashed var(--ink-soft);
+    padding-top: 0.5rem;
+  }
+  .answer-card summary {
+    cursor: pointer;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .answer-card summary::-webkit-details-marker { display: none; }
+  .answer-card summary::before {
+    content: '+';
+    font-family: 'Bagel Fat One', cursive;
+    font-size: 1.1rem;
+    color: var(--rose);
+  }
+  .answer-card details[open] summary::before { content: '–'; }
+  .answer-card details[open] summary { color: var(--ink); }
+  #scene-answer-real {
+    margin: 0.5rem 0 0;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 600;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+
+  /* chat thread */
+  #chat-thread {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 0.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin-bottom: 0.9rem;
+    min-height: 80px;
+  }
+  #chat-thread:empty::after {
+    content: 'no questions yet — type below or pick one off the corkboard.';
+    font-family: 'Caveat', cursive;
+    font-size: 1.1rem;
+    color: var(--ink-soft);
+    text-align: center;
+    margin: auto 0;
+  }
+  .turn {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    animation: turnIn .3s ease-out;
+  }
+  @keyframes turnIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .turn .you,
+  .turn .them {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    padding: 0.5rem 0.8rem;
+    border: 2px solid var(--ink);
+    border-radius: 14px;
+    max-width: 92%;
+  }
+  .turn .you {
+    background: var(--sky);
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .turn .them {
+    background: var(--cream-dark);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .turn .label {
+    font-family: 'Caveat', cursive;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+  }
+  .turn .you-row { align-self: flex-end; max-width: 92%; }
+  .turn .them-row { align-self: flex-start; max-width: 92%; }
+
+  /* chat input */
+  .chat-input {
+    display: flex;
+    gap: 0.5rem;
+    background: white;
+    border: 2.4px solid var(--ink);
+    border-radius: 100px;
+    padding: 0.35rem 0.4rem 0.35rem 1rem;
+    box-shadow: var(--shadow);
+    align-items: center;
+  }
+  #ask-input {
+    flex: 1;
+    appearance: none;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 500;
+    font-size: 1rem;
+    color: var(--ink);
+    padding: 0.55rem 0;
+  }
+  #ask-input::placeholder {
+    color: var(--ink-soft);
+    font-style: italic;
+    opacity: 0.7;
+  }
+  #ask-submit {
+    appearance: none;
+    border: 2px solid var(--ink);
+    border-radius: 100px;
+    background: var(--leaf);
+    color: var(--ink);
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 0.5rem 1.05rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: transform .12s ease, box-shadow .12s ease, background .15s ease;
+    white-space: nowrap;
+  }
+  #ask-submit:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+  #ask-submit:active { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink); }
+  #ask-submit[disabled] {
+    background: var(--cream-dark);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  /* =========================================================
+     RESPONSIVE
+  ========================================================= */
+  @media (max-width: 1100px) {
+    .wall { grid-template-columns: 1fr; gap: 1.4rem; }
+    .researcher-col { flex-direction: row; align-items: flex-start; gap: 1rem; max-width: 100%; }
+    .researcher-bubble { max-width: 100%; flex: 1; margin-bottom: 0; transform: rotate(0); }
+    .researcher-bubble::before { left: auto; right: -16px; bottom: auto; top: 30%; transform: rotate(-45deg); }
+    .researcher-figure { max-width: 150px; margin-top: 0; flex-shrink: 0; }
+    .researcher-name { display: none; }
+    .lamp { width: 160px; top: -2.4rem; }
+    .lower { grid-template-columns: 1fr; }
+    .wall-clock { display: none; }
+    .poster.p-protein { left: auto; right: 4%; top: -0.8rem; }
+    .poster.p-stell, .poster.p-anti { display: none; }
+  }
+  @media (max-width: 700px) {
+    .room { padding: 0 1rem 3rem; }
+    .room-sign { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+    .room-tag { font-size: 1.1rem; }
+    .researcher-col { flex-direction: column; align-items: center; }
+    .researcher-bubble::before { left: 30%; right: auto; top: auto; bottom: -16px; transform: rotate(45deg); }
+    .researcher-figure { max-width: 180px; }
+    .lamp { width: 130px; top: -1.6rem; }
+    .marker-tray { flex-direction: column; align-items: stretch; gap: 0.6rem; }
+    #scene-zoom { margin-left: 0; align-self: flex-start; }
+    .markers { justify-content: center; }
+    .desk { height: 88px; }
+    .desk-note { font-size: 0.9rem; }
+    #scene-question { font-size: 1.4rem; }
+  }
+
+  /* footer */
+  .room-footer {
+    margin-top: 2.5rem;
+    text-align: center;
+    font-family: 'Caveat', cursive;
+    font-size: 1.15rem;
+    color: var(--ink-soft);
+  }
+  .room-footer span { color: var(--rose); }
+</style>
+</head>
+
+<body>
+
+<div class="room">
+
+  <!-- ============ SIGN / WORDMARK ============ -->
+  <div class="room-sign">
+    <div class="wordmark">
+      <span class="w1">wonder</span><span class="w2">lab</span><span class="w3">✦</span>
+    </div>
+    <div class="room-tag">the lab is open · come on in</div>
+  </div>
+
+  <!-- ============ WALL: posters + lamp + clock + researcher + whiteboard ============ -->
+  <div class="wall">
+
+    <!-- posters pinned to the wall, behind everything -->
+    <div class="wall-posters" aria-hidden="true">
+
+      <!-- protein ribbon poster -->
+      <figure class="poster p-protein" style="width:120px;">
+        <svg viewBox="0 0 120 90" width="100%" height="auto">
+          <rect width="120" height="90" fill="#FFF8E8" />
+          <path d="M8 70 C 22 30, 36 80, 50 40 S 78 80, 92 35 S 116 70, 116 70"
+            fill="none" stroke="#7CB7D0" stroke-width="4" stroke-linecap="round"/>
+          <path d="M8 70 C 22 30, 36 80, 50 40 S 78 80, 92 35 S 116 70, 116 70"
+            fill="none" stroke="#2D2622" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="2 3"/>
+          <circle cx="22" cy="50" r="3" fill="#F8A5C2" stroke="#2D2622" stroke-width="1"/>
+          <circle cx="50" cy="40" r="3" fill="#FFD16B" stroke="#2D2622" stroke-width="1"/>
+          <circle cx="78" cy="62" r="3" fill="#B8DFA0" stroke="#2D2622" stroke-width="1"/>
+          <text x="6" y="14" font-family="Caveat, cursive" font-size="11" fill="#2D2622">α-helix</text>
+        </svg>
+        <figcaption>folds you can fold</figcaption>
+      </figure>
+
+      <!-- stellarator coils poster -->
+      <figure class="poster p-stell" style="width:130px;">
+        <svg viewBox="0 0 130 90" width="100%" height="auto">
+          <rect width="130" height="90" fill="#F4E8C9" />
+          <ellipse cx="65" cy="45" rx="45" ry="25" fill="none" stroke="#2D2622" stroke-width="2"/>
+          <ellipse cx="65" cy="45" rx="45" ry="25" fill="none" stroke="#7CB7D0" stroke-width="1.4"
+            stroke-dasharray="3 4" transform="rotate(20 65 45)"/>
+          <ellipse cx="65" cy="45" rx="45" ry="25" fill="none" stroke="#F8A5C2" stroke-width="1.4"
+            stroke-dasharray="3 4" transform="rotate(-20 65 45)"/>
+          <path d="M30 45 Q 65 20 100 45 Q 65 70 30 45" fill="none" stroke="#E66363" stroke-width="2"/>
+          <text x="6" y="14" font-family="Caveat, cursive" font-size="11" fill="#2D2622">stellarator</text>
+        </svg>
+        <figcaption>twisty plasma traps</figcaption>
+      </figure>
+
+      <!-- antibody Y poster -->
+      <figure class="poster p-anti" style="width:115px;">
+        <svg viewBox="0 0 115 95" width="100%" height="auto">
+          <rect width="115" height="95" fill="#FFFCEC" />
+          <line x1="57" y1="80" x2="57" y2="50" stroke="#2D2622" stroke-width="3"/>
+          <line x1="57" y1="50" x2="32" y2="20" stroke="#2D2622" stroke-width="3"/>
+          <line x1="57" y1="50" x2="82" y2="20" stroke="#2D2622" stroke-width="3"/>
+          <circle cx="32" cy="20" r="9" fill="#FFD16B" stroke="#2D2622" stroke-width="2"/>
+          <circle cx="82" cy="20" r="9" fill="#FFD16B" stroke="#2D2622" stroke-width="2"/>
+          <rect x="50" y="48" width="14" height="34" fill="#B5DCEB" stroke="#2D2622" stroke-width="2" rx="4"/>
+          <text x="6" y="14" font-family="Caveat, cursive" font-size="11" fill="#2D2622">IgG</text>
+        </svg>
+        <figcaption>tiny target-finders</figcaption>
+      </figure>
+
+      <!-- periodic table corner -->
+      <figure class="poster p-table" style="width:160px;">
+        <svg viewBox="0 0 160 56" width="100%" height="auto">
+          <g font-family="Fredoka, sans-serif" font-weight="700" stroke="#2D2622" stroke-width="1.6">
+            <rect x="4"  y="6" width="28" height="28" fill="#B8DFA0"/>
+            <text x="10" y="26" font-size="14" stroke="none" fill="#2D2622">C</text>
+            <rect x="36" y="6" width="28" height="28" fill="#B5DCEB"/>
+            <text x="42" y="26" font-size="14" stroke="none" fill="#2D2622">H</text>
+            <rect x="68" y="6" width="28" height="28" fill="#FFD16B"/>
+            <text x="74" y="26" font-size="14" stroke="none" fill="#2D2622">N</text>
+            <rect x="100" y="6" width="28" height="28" fill="#FFB7A8"/>
+            <text x="105" y="26" font-size="14" stroke="none" fill="#2D2622">O</text>
+            <rect x="132" y="6" width="24" height="28" fill="#F8A5C2"/>
+            <text x="137" y="26" font-size="13" stroke="none" fill="#2D2622">P</text>
+          </g>
+          <text x="4" y="50" font-family="Caveat, cursive" font-size="13" fill="#5C4A3F">the gang</text>
+        </svg>
+      </figure>
+
+    </div><!-- /wall-posters -->
+
+    <!-- wall clock -->
+    <div class="wall-clock" aria-hidden="true">
+      <svg viewBox="0 0 60 60" width="64" height="64">
+        <circle cx="30" cy="30" r="26" fill="#FFFCEC" stroke="#2D2622" stroke-width="2"/>
+        <g stroke="#2D2622" stroke-width="2" stroke-linecap="round">
+          <line x1="30" y1="8"  x2="30" y2="13"/>
+          <line x1="30" y1="47" x2="30" y2="52"/>
+          <line x1="8"  y1="30" x2="13" y2="30"/>
+          <line x1="47" y1="30" x2="52" y2="30"/>
+        </g>
+        <line x1="30" y1="30" x2="30" y2="14" stroke="#2D2622" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="30" y1="30" x2="42" y2="30" stroke="#E66363" stroke-width="2" stroke-linecap="round">
+          <animateTransform attributeName="transform" type="rotate" from="0 30 30" to="360 30 30" dur="60s" repeatCount="indefinite"/>
+        </line>
+        <circle cx="30" cy="30" r="2" fill="#2D2622"/>
+      </svg>
+    </div>
+
+    <!-- ============ RESEARCHER ============ -->
+    <div class="researcher-col">
+      <div class="researcher-bubble" id="researcher-bubble">
+        <span class="who">— the researcher</span>
+        hi! pull up a chair. ask me anything, or grab a question off the board.
+      </div>
+
+      <!-- The researcher: lab coat, friendly face, holding a marker -->
+      <svg class="researcher-figure" viewBox="0 0 260 320" xmlns="http://www.w3.org/2000/svg" aria-label="the researcher">
+        <!-- shadow on floor -->
+        <ellipse cx="130" cy="312" rx="78" ry="6" fill="#5C4A3F" opacity=".18"/>
+
+        <!-- legs (under lab coat hem) -->
+        <rect x="100" y="248" width="22" height="58" fill="#2D3242" stroke="#2D2622" stroke-width="2" rx="3"/>
+        <rect x="138" y="248" width="22" height="58" fill="#2D3242" stroke="#2D2622" stroke-width="2" rx="3"/>
+        <!-- shoes -->
+        <ellipse cx="111" cy="306" rx="16" ry="6" fill="#2D2622"/>
+        <ellipse cx="149" cy="306" rx="16" ry="6" fill="#2D2622"/>
+
+        <!-- lab coat body -->
+        <path d="M70 175 Q70 168 80 162 L110 152 Q130 146 150 152 L180 162 Q190 168 190 175 L196 268 Q175 276 130 276 Q85 276 64 268 Z"
+              fill="#FFFFFF" stroke="#2D2622" stroke-width="2.5" stroke-linejoin="round"/>
+        <!-- coat shadow inside -->
+        <path d="M70 175 Q70 168 80 162 L110 152 Q130 146 150 152 L180 162 Q190 168 190 175"
+              fill="none" stroke="#D9D2C0" stroke-width="2"/>
+        <!-- coat lapels -->
+        <path d="M105 158 L130 178 L155 158 L150 200 L130 218 L110 200 Z"
+              fill="#F4E8C9" stroke="#2D2622" stroke-width="2"/>
+        <line x1="130" y1="178" x2="130" y2="270" stroke="#2D2622" stroke-width="1.5" stroke-dasharray="2 2"/>
+
+        <!-- buttons -->
+        <circle cx="130" cy="218" r="2.4" fill="#2D2622"/>
+        <circle cx="130" cy="238" r="2.4" fill="#2D2622"/>
+        <circle cx="130" cy="258" r="2.4" fill="#2D2622"/>
+
+        <!-- breast pocket with pen -->
+        <rect x="155" y="195" width="22" height="20" fill="#FFFFFF" stroke="#2D2622" stroke-width="1.6" rx="1"/>
+        <line x1="160" y1="190" x2="160" y2="208" stroke="#7CB7D0" stroke-width="2.8" stroke-linecap="round"/>
+
+        <!-- ID badge -->
+        <rect x="80" y="200" width="22" height="14" fill="#FFD16B" stroke="#2D2622" stroke-width="1.6" rx="2"/>
+        <line x1="80" y1="194" x2="102" y2="200" stroke="#2D2622" stroke-width="1.4"/>
+        <circle cx="91" cy="207" r="2.8" fill="#FFFFFF" stroke="#2D2622" stroke-width="1"/>
+        <line x1="86" y1="211" x2="96" y2="211" stroke="#2D2622" stroke-width="0.8"/>
+
+        <!-- left arm (down) -->
+        <path d="M76 178 Q66 220 78 252 L96 250 Q92 220 96 184 Z"
+              fill="#FFFFFF" stroke="#2D2622" stroke-width="2.4" stroke-linejoin="round"/>
+        <!-- left hand -->
+        <circle cx="86" cy="256" r="9" fill="#F2C9A4" stroke="#2D2622" stroke-width="2"/>
+
+        <!-- right arm (raised, holding marker) -->
+        <g class="marker-arm">
+          <path d="M180 175 Q200 195 196 230 Q188 246 168 240 Q172 215 168 178 Z"
+                fill="#FFFFFF" stroke="#2D2622" stroke-width="2.4" stroke-linejoin="round"/>
+          <!-- right hand -->
+          <circle cx="186" cy="232" r="10" fill="#F2C9A4" stroke="#2D2622" stroke-width="2"/>
+          <!-- marker -->
+          <g transform="rotate(40 196 232)">
+            <rect x="190" y="232" width="40" height="9" fill="#E66363" stroke="#2D2622" stroke-width="1.8" rx="2"/>
+            <rect x="226" y="234" width="6" height="5" fill="#2D2622" rx="1"/>
+            <rect x="186" y="232" width="6" height="9" fill="#2D2622" rx="1"/>
+          </g>
+        </g>
+
+        <!-- neck -->
+        <rect x="119" y="138" width="22" height="20" fill="#F2C9A4" stroke="#2D2622" stroke-width="2"/>
+
+        <!-- HEAD -->
+        <ellipse cx="130" cy="110" rx="42" ry="44" fill="#F2C9A4" stroke="#2D2622" stroke-width="2.5"/>
+
+        <!-- hair: curly tousle on top -->
+        <path d="M92 96 Q88 70 110 62 Q116 54 130 56 Q146 50 156 64 Q174 68 172 92 Q166 84 152 88 Q142 78 130 84 Q118 80 108 90 Q100 88 92 96 Z"
+              fill="#5C3F25" stroke="#2D2622" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M96 92 Q98 88 102 90 M106 86 Q110 82 114 86 M120 82 Q124 78 128 82 M140 84 Q144 80 148 84 M156 88 Q160 84 164 88"
+              fill="none" stroke="#2D2622" stroke-width="1.2" stroke-linecap="round"/>
+
+        <!-- glasses -->
+        <circle cx="115" cy="110" r="11" fill="rgba(181,220,235,.35)" stroke="#2D2622" stroke-width="2"/>
+        <circle cx="145" cy="110" r="11" fill="rgba(181,220,235,.35)" stroke="#2D2622" stroke-width="2"/>
+        <line x1="126" y1="110" x2="134" y2="110" stroke="#2D2622" stroke-width="2"/>
+        <line x1="104" y1="108" x2="98"  y2="106" stroke="#2D2622" stroke-width="2"/>
+        <line x1="156" y1="108" x2="162" y2="106" stroke="#2D2622" stroke-width="2"/>
+
+        <!-- eyes (behind glasses) -->
+        <circle cx="115" cy="111" r="2.2" fill="#2D2622"/>
+        <circle cx="145" cy="111" r="2.2" fill="#2D2622"/>
+
+        <!-- eyebrows -->
+        <path d="M104 96 Q113 92 124 96" fill="none" stroke="#2D2622" stroke-width="2" stroke-linecap="round"/>
+        <path d="M136 96 Q146 92 156 96" fill="none" stroke="#2D2622" stroke-width="2" stroke-linecap="round"/>
+
+        <!-- nose -->
+        <path d="M130 116 Q128 124 132 130" fill="none" stroke="#2D2622" stroke-width="1.8" stroke-linecap="round"/>
+
+        <!-- friendly half-smile -->
+        <path d="M118 134 Q130 142 144 134" fill="none" stroke="#2D2622" stroke-width="2" stroke-linecap="round"/>
+        <!-- cheek blush -->
+        <ellipse cx="100" cy="124" rx="6" ry="3" fill="#FFB7A8" opacity=".7"/>
+        <ellipse cx="160" cy="124" rx="6" ry="3" fill="#FFB7A8" opacity=".7"/>
+
+        <!-- ear -->
+        <path d="M88 108 Q82 110 84 122 Q88 130 92 124" fill="#F2C9A4" stroke="#2D2622" stroke-width="2"/>
+      </svg>
+
+      <div class="researcher-name">
+        <span>dr. iris ✦ AI</span>
+      </div>
+    </div>
+
+    <!-- ============ WHITEBOARD ============ -->
+    <div class="board-col">
+
+      <!-- the lamp hanging above the board -->
+      <div class="lamp" aria-hidden="true">
+        <svg viewBox="0 0 220 120">
+          <!-- arm -->
+          <path d="M110 0 L110 30 L70 70" fill="none" stroke="#2D2622" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="110" cy="30" r="6" fill="#FFD16B" stroke="#2D2622" stroke-width="2"/>
+          <!-- shade -->
+          <path d="M40 70 L100 70 L80 110 L20 110 Z"
+                fill="#F4B942" stroke="#2D2622" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M22 110 L78 110" stroke="#2D2622" stroke-width="2" />
+          <ellipse cx="50" cy="110" rx="30" ry="3" fill="#FFE9A8"/>
+          <!-- bulb glow -->
+          <circle cx="50" cy="112" r="4" fill="#FFFFFF" opacity=".95"/>
+        </svg>
+      </div>
+
+      <div class="scene-question-wrap">
+        <p id="scene-question">…</p>
+      </div>
+
+      <div class="whiteboard">
+        <span class="screw tl" aria-hidden="true"></span>
+        <span class="screw tr" aria-hidden="true"></span>
+        <span class="screw bl" aria-hidden="true"></span>
+        <span class="screw br" aria-hidden="true"></span>
+
+        <div class="whiteboard-surface">
+          <div class="lamp-glow" aria-hidden="true"></div>
+
+          <canvas id="splat-canvas" width="800" height="600" aria-label="the whiteboard"></canvas>
+
+          <div class="board-overlay">
+            <div id="splat-status">starting…</div>
+          </div>
+
+          <span class="board-live-tag" aria-hidden="true">live</span>
+
+          <div id="scene-aha"></div>
+        </div>
+
+        <!-- marker tray + controls -->
+        <div class="marker-tray">
+          <div class="markers" aria-hidden="true">
+            <span class="marker m-red"></span>
+            <span class="marker m-blue"></span>
+            <span class="marker m-black"></span>
+          </div>
+          <div class="slider-row">
+            <label for="scene-slider" id="scene-slider-label">value</label>
+            <input type="range" id="scene-slider" min="0" max="100" value="0">
+          </div>
+          <button class="zoom-btn" id="scene-zoom" type="button">↓ zoom in</button>
+        </div>
+      </div>
+    </div><!-- /board-col -->
+  </div><!-- /wall -->
+
+  <!-- ============ DESK STRIP ============ -->
+  <div class="desk" aria-hidden="false">
+    <div class="desk-surface" aria-hidden="true"></div>
+    <div class="desk-items">
+
+      <!-- coffee mug with steam -->
+      <div class="mug">
+        <svg class="steam" viewBox="0 0 42 42">
+          <path d="M14 34 Q10 26 16 18 Q22 10 18 4"/>
+          <path d="M22 36 Q26 28 22 20 Q18 12 24 4"/>
+          <path d="M30 34 Q26 26 32 18 Q34 12 30 4"/>
+        </svg>
+        <svg viewBox="0 0 80 90" width="100%" height="100%">
+          <!-- mug body -->
+          <path d="M12 22 L62 22 L58 78 Q40 82 16 78 Z"
+                fill="#FFD16B" stroke="#2D2622" stroke-width="2.5" stroke-linejoin="round"/>
+          <!-- handle -->
+          <path d="M62 32 Q78 32 78 50 Q78 68 60 68"
+                fill="none" stroke="#2D2622" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- coffee -->
+          <ellipse cx="37" cy="22" rx="25" ry="4" fill="#5C3F25"/>
+          <ellipse cx="37" cy="22" rx="22" ry="3" fill="#7E5635"/>
+          <!-- doodle on mug -->
+          <text x="22" y="58" font-family="Caveat, cursive" font-weight="700" font-size="16" fill="#2D2622">lab</text>
+        </svg>
+      </div>
+
+      <!-- a sticky desk note -->
+      <div class="desk-note">
+        ask me anything <br><b>(really)</b>
+      </div>
+
+      <!-- small stack of papers -->
+      <div class="papers">
+        <svg viewBox="0 0 80 70" width="100%" height="100%">
+          <rect x="6"  y="14" width="62" height="48" fill="#FFFFFF" stroke="#2D2622" stroke-width="2" transform="rotate(-3 37 38)"/>
+          <rect x="10" y="10" width="62" height="48" fill="#FFFCEC" stroke="#2D2622" stroke-width="2" transform="rotate(2 41 34)"/>
+          <line x1="18" y1="22" x2="60" y2="22" stroke="#7CB7D0" stroke-width="1.5" transform="rotate(2 41 34)"/>
+          <line x1="18" y1="30" x2="56" y2="30" stroke="#7CB7D0" stroke-width="1.5" transform="rotate(2 41 34)"/>
+          <line x1="18" y1="38" x2="50" y2="38" stroke="#7CB7D0" stroke-width="1.5" transform="rotate(2 41 34)"/>
+          <line x1="18" y1="46" x2="44" y2="46" stroke="#7CB7D0" stroke-width="1.5" transform="rotate(2 41 34)"/>
+        </svg>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ LOWER ROOM: corkboard + notepad ============ -->
+  <section class="lower">
+
+    <!-- corkboard with sticky-note questions from real researchers -->
+    <div class="corkboard">
+      <div class="corkboard-header">
+        <h2 class="corkboard-title">the corkboard</h2>
+        <span class="corkboard-sub">— questions real researchers are stuck on</span>
+      </div>
+
+      <!--
+        #question-pinboard is populated by JS (./src/main.js) from
+        ./src/researcher-questions.js. Each card should have
+        data-qid="<id>" and class "sticky <color>". Layout below is
+        a placeholder hint that gets replaced when JS hydrates.
+      -->
+      <div id="question-pinboard">
+        <div class="pinboard-empty">pinning questions to the board…</div>
+      </div>
+    </div>
+
+    <!-- notepad: chat thread + answer card + chat input -->
+    <div class="notepad">
+      <div class="notepad-inner">
+        <div class="notepad-tabs">
+          <span class="nptab active">chat</span>
+          <span class="nptab">answer</span>
+        </div>
+
+        <!-- answer card (kid + 'show me the real science' expand) -->
+        <div class="answer-card">
+          <p id="scene-answer-kid">…</p>
+          <details>
+            <summary>show me the real science</summary>
+            <p id="scene-answer-real">…</p>
+          </details>
+        </div>
+
+        <!-- chat thread (Q&A turns) -->
+        <div id="chat-thread"></div>
+
+        <!-- input -->
+        <form class="chat-input" id="ask-form" autocomplete="off">
+          <input id="ask-input" type="text" placeholder="ask the researcher anything…" />
+          <button id="ask-submit" type="submit">send →</button>
+        </form>
+      </div>
+    </div>
+
+  </section>
+
+  <p class="room-footer">
+    made with <span>♥</span> in the lab · everything you see runs on your own machine
+  </p>
+</div>
+
+<!-- ============ THREE.JS / SCENE WIRING ============ -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="./src/main.js"></script>
+
+<!-- safety fallback so an early submit (before main.js binds) doesn't reload the page -->
+<script>
+  document.getElementById('ask-form')?.addEventListener('submit', (e) => e.preventDefault());
+</script>
+
+</body>
+</html>
