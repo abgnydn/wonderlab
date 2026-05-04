@@ -126,6 +126,17 @@ See `CLAUDE.md` for the full contract + handoff context.
 If you fork the repo and run your own deploy, the same is true of *that*
 deploy — there's nothing in the codebase that opens a tunnel back to us.
 
+## Credits
+
+Default ambient track shipped at `/music/loop.mp3`:
+
+> **"Wallpaper"** by Kevin MacLeod ([incompetech.com](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100296)) — licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+If you swap it out, the player falls back to a procedural pentatonic
+piece generated entirely in Web Audio (no external asset). Drop any
+kid-safe instrumental at `music/loop.mp3` and `npm run build` picks it
+up automatically. See `music/CREDITS.txt` for free-music sources.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

@@ -1,0 +1,22 @@
+wonderlab — music credits
+=========================
+
+The default ambient loop shipped at /music/loop.mp3 is:
+
+  "Wallpaper"  —  Kevin MacLeod  (incompetech.com)
+  Licensed under Creative Commons: By Attribution 4.0 International
+  https://creativecommons.org/licenses/by/4.0/
+  Source: https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100296
+
+To swap it out, drop your own kid-safe instrumental in this folder
+(any name → just rename to loop.mp3 OR change MUSIC_FILE_URL in
+src/audio.js). Suggested CC0 / CC-BY sources:
+
+  • Pixabay Music    — https://pixabay.com/music/   (CC0, no attribution)
+  • Free Music Archive — https://freemusicarchive.org/genre/Kid-Friendly
+  • Kevin MacLeod     — https://incompetech.com/music/royalty-free/
+  • Audionautix       — https://audionautix.com/    (CC-BY 4.0)
+  • Chosic            — https://www.chosic.com/free-music/all/
+
+If you swap to something not under CC0, please update this file
+and the README so the attribution stays correct.

@@ -26,6 +26,7 @@ const SHIP = [
   'og.svg',
   'system-prompt.txt',
   'src',
+  'music',           // drop loop.mp3 (or any kid-safe instrumental) in here
   '_headers',
 ];
 

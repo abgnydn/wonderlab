@@ -22,6 +22,10 @@
 /src/*
   Cache-Control: public, max-age=600
 
+# audio loop — large + rarely changes, cache hard
+/music/*
+  Cache-Control: public, max-age=2592000, immutable
+
 # the service worker — must update on every visit, never cache
 /sw.js
   Cache-Control: public, max-age=0, must-revalidate

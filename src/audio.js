@@ -111,17 +111,20 @@ export function ambient(on) {
 }
 
 // =============================================================
-// Procedural ambient music — three layers, all generated at runtime,
-// no audio assets. Goal: gentle, pleasant, infinite, kid-safe.
+// Ambient music — two paths:
 //
-//   • drone  — long sustained low note, slowly drifting (the "room")
-//   • melody — sparse single notes from C major pentatonic
-//              (always sounds pleasant, can't pick a "wrong" note)
-//   • chime  — every ~10s, a soft music-box ping high up
+//   1. REAL FILE (preferred)
+//      If /music/loop.mp3 exists in the deploy, we play it on loop
+//      through Web Audio (so we get smooth gain ramps + a lowpass,
+//      not just <audio>). Drop any kid-safe instrumental in there.
 //
-// All layers feed a master gain → a gentle 4th-order lowpass → output,
-// so nothing ever sounds harsh or piercing.
+//   2. PROCEDURAL FALLBACK
+//      Three Web-Audio layers (drone, pentatonic melody, music-box
+//      chime). Always available, infinite, no asset shipped.
+//      Used when the file 404s.
 // =============================================================
+
+const MUSIC_FILE_URL = '/music/loop.mp3';      // any path in public/music/ works
 
 // C major pentatonic across two and a bit octaves — the safest "always
 // sounds nice" scale. Children's-music staple for a reason.
@@ -196,45 +199,83 @@ function _scheduleChimePing() {
   _music.chimeTimer = setTimeout(_scheduleChimePing, next);
 }
 
-export function music(on) {
+function _startProcedural() {
+  const c = ctx(); if (!c) return;
+  // master bus → gentle lowpass → main out
+  const bus = c.createGain();
+  bus.gain.value = 0.0;
+  const lp = c.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 4500;
+  bus.connect(lp).connect(c.destination);
+
+  // drone: two slightly-detuned sines on C3 with very slow LFO on the gain
+  const d1 = c.createOscillator(); d1.type = 'sine'; d1.frequency.value = DRONE_HZ;
+  const d2 = c.createOscillator(); d2.type = 'sine'; d2.frequency.value = DRONE_HZ * 1.005;
+  const dg = c.createGain(); dg.gain.value = 0.018;
+  const lfo = c.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.07;
+  const lfoGain = c.createGain(); lfoGain.gain.value = 0.012;
+  lfo.connect(lfoGain).connect(dg.gain);
+  d1.connect(dg); d2.connect(dg); dg.connect(bus);
+  d1.start(); d2.start(); lfo.start();
+
+  _music = { kind: 'proc', bus, drone: [d1, d2, lfo], melodyTimer: null, chimeTimer: null };
+  bus.gain.linearRampToValueAtTime(1.0, c.currentTime + 2.0);
+  setTimeout(_scheduleMelodyNote, 2000 + Math.random() * 1500);
+  setTimeout(_scheduleChimePing,  6000 + Math.random() * 3000);
+}
+
+async function _startFile(url) {
+  const c = ctx(); if (!c) return false;
+  try {
+    const el = new Audio();
+    el.crossOrigin = 'anonymous';
+    el.loop = true;
+    el.preload = 'auto';
+    el.src = url;
+    // wait for enough buffer to start without stutter
+    await new Promise((res, rej) => {
+      el.addEventListener('canplay', res, { once: true });
+      el.addEventListener('error',   () => rej(new Error('audio load failed')), { once: true });
+      // safety timeout — fall back to procedural if it stalls
+      setTimeout(() => rej(new Error('audio load timeout')), 8000);
+    });
+    const src  = c.createMediaElementSource(el);
+    const bus  = c.createGain();    bus.gain.value = 0;
+    const lp   = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 12000;
+    src.connect(bus).connect(lp).connect(c.destination);
+    await el.play();
+    bus.gain.linearRampToValueAtTime(0.6, c.currentTime + 1.5);
+    _music = { kind: 'file', el, src, bus };
+    return true;
+  } catch (e) {
+    console.info('[wonderlab] no music file at', url, '— using procedural', e?.message || '');
+    return false;
+  }
+}
+
+export async function music(on) {
   const c = ctx(); if (!c) return;
   if (on && !_music) {
-    // master bus → gentle lowpass → main out
-    const bus = c.createGain();
-    bus.gain.value = 0.0;
-    const lp = c.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.value = 4500;
-    bus.connect(lp).connect(c.destination);
-
-    // drone: two slightly-detuned sines on C3 with very slow LFO on the
-    // gain so it breathes
-    const d1 = c.createOscillator(); d1.type = 'sine'; d1.frequency.value = DRONE_HZ;
-    const d2 = c.createOscillator(); d2.type = 'sine'; d2.frequency.value = DRONE_HZ * 1.005;
-    const dg = c.createGain(); dg.gain.value = 0.018;
-    const lfo = c.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.07;
-    const lfoGain = c.createGain(); lfoGain.gain.value = 0.012;
-    lfo.connect(lfoGain).connect(dg.gain);
-    d1.connect(dg); d2.connect(dg); dg.connect(bus);
-    d1.start(); d2.start(); lfo.start();
-
-    _music = { bus, drone: [d1, d2, lfo], melodyTimer: null, chimeTimer: null };
-    bus.gain.linearRampToValueAtTime(1.0, c.currentTime + 2.0);
-
-    // start the two timed layers (slight initial delay so the drone
-    // settles in before notes start landing)
-    setTimeout(_scheduleMelodyNote, 2000 + Math.random() * 1500);
-    setTimeout(_scheduleChimePing,  6000 + Math.random() * 3000);
+    // try the real file first; if it 404s or stalls, run the procedural piece
+    const ok = await _startFile(MUSIC_FILE_URL);
+    if (!ok) _startProcedural();
   } else if (!on && _music) {
-    if (_music.melodyTimer) clearTimeout(_music.melodyTimer);
-    if (_music.chimeTimer)  clearTimeout(_music.chimeTimer);
-    _music.bus.gain.linearRampToValueAtTime(0, c.currentTime + 1.0);
-    const drone = _music.drone;
-    setTimeout(() => {
-      try { for (const o of drone) o.stop(); } catch {}
-      try { _music.bus.disconnect(); } catch {}
-    }, 1100);
-    _music = null;
+    const m = _music; _music = null;
+    if (m.kind === 'file') {
+      m.bus.gain.linearRampToValueAtTime(0, c.currentTime + 0.6);
+      setTimeout(() => {
+        try { m.el.pause(); m.el.src = ''; m.src.disconnect(); m.bus.disconnect(); } catch {}
+      }, 700);
+    } else {
+      if (m.melodyTimer) clearTimeout(m.melodyTimer);
+      if (m.chimeTimer)  clearTimeout(m.chimeTimer);
+      m.bus.gain.linearRampToValueAtTime(0, c.currentTime + 1.0);
+      setTimeout(() => {
+        try { for (const o of m.drone) o.stop(); } catch {}
+        try { m.bus.disconnect(); } catch {}
+      }, 1100);
+    }
   }
 }
 
