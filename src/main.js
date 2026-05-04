@@ -596,6 +596,7 @@ function closeSettingsModal() {
   if (!modal) return;
   modal.hidden = true;
   document.body.style.overflow = '';
+  refreshConnectHint();   // re-evaluate hint visibility after edits
 }
 
 function rebuildSettingsContents() {
@@ -658,6 +659,7 @@ function rebuildSettingsContents() {
           const s = loadSettings();
           s.keys[conn.id] = e.target.value;
           saveSettings(s);
+          refreshConnectHint();
         });
       }
       // url field for LM Studio
@@ -698,6 +700,9 @@ function rebuildSettingsContents() {
     }
   }
 
+  // hint visibility refresh (in case user changed backend / pasted key)
+  refreshConnectHint();
+
   // draw toggle in settings (mirror of the chip in chat input)
   const drawT = $('settings-draw-toggle');
   if (drawT) {
@@ -725,10 +730,34 @@ function escapeAttr(s) {
   return String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]);
 }
 
+// First-time visitor hint: nudge them toward settings when the active
+// backend needs a key and there isn't one. Stored "dismissed" in
+// localStorage so it doesn't keep coming back after they choose to ignore it.
+const HINT_DISMISSED_KEY = 'wonderlab.connectHint.dismissed';
+
+function refreshConnectHint() {
+  const hint = $('connect-hint');
+  if (!hint) return;
+  const dismissed = localStorage.getItem(HINT_DISMISSED_KEY) === '1';
+  if (dismissed) { hint.hidden = true; return; }
+  const s = loadSettings();
+  const conn = getActiveConnector(s);
+  // show only when the chosen backend needs a key AND the key is empty
+  const need = conn?.needsKey && !(s.keys[conn.id] || '').trim();
+  hint.hidden = !need;
+}
+
 function setupSettings() {
   // open the modal from the gear button (and on body's "open-settings" event)
   $('settings-btn')?.addEventListener('click', () => openSettingsModal());
   document.addEventListener('open-settings', () => openSettingsModal());
+
+  // first-time hint above the chat input
+  $('connect-hint-open')?.addEventListener('click', () => openSettingsModal());
+  $('connect-hint-dismiss')?.addEventListener('click', () => {
+    try { localStorage.setItem(HINT_DISMISSED_KEY, '1'); } catch {}
+    refreshConnectHint();
+  });
 
   // close on backdrop / X / escape
   $('settings-modal')?.addEventListener('click', (e) => {
@@ -806,6 +835,8 @@ function setupSettings() {
       chip.classList.toggle('is-off', !on);
       chip.setAttribute('aria-pressed', on ? 'true' : 'false');
     }
+    // and the first-time hint
+    refreshConnectHint();
   });
 }
 

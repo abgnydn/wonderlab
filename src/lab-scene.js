@@ -51,11 +51,15 @@ const BOARD_H   = 4.4;
 const TARGET_W  = 1024;
 const TARGET_H  = 720;
 
-// the researcher's anchor — past the desk's left edge (desk is 8.5
-// wide centered at 0, so left edge = -4.25) so the desk doesn't
-// occlude her legs. Also keeps her clear of the centered chat input.
-const RES_X = -5.0;
-const RES_Z =  2.6;
+// the researcher's anchor — standing near her whiteboard (back wall) so
+// she's the first thing the visitor sees walking into the room. Sits
+// well behind the desk's apron so nothing visually clips her legs.
+//   • whiteboard centre is at (1.4, 2.5, -6.79); back wall at z=-7
+//   • RES_Z = -5.0 places her ~2 units in front of the board
+//   • RES_X = -3.0 keeps her plane (1.8 wide) just past the whiteboard's
+//     left edge (~-1.8), so they sit side-by-side without overlap
+const RES_X = -3.0;
+const RES_Z = -5.0;
 
 export class LabScene {
   constructor(canvas) {

@@ -156,9 +156,14 @@
     top: 0.9rem;
     right: 0.9rem;
     z-index: 6;
-    display: none;     /* shown only at mobile breakpoint */
+    display: flex;
     gap: 0.4rem;
+    align-items: center;
   }
+  /* on desktop the chat thread + corkboard live in their own panels, so
+     the toggle buttons are mobile-only — gear stays visible everywhere */
+  .panel-toggles #toggle-chat,
+  .panel-toggles #toggle-cork { display: none; }
   .panel-toggles button {
     appearance: none;
     border: 2.2px solid var(--ink);
@@ -541,16 +546,18 @@
   }
   #splat-canvas:active { cursor: grabbing; }
 
-  /* status pill on the whiteboard */
+  /* status pill — only surfaces when the system has something the visitor
+     needs to act on (an error). Routine "drawing…" / "on the whiteboard"
+     live on the whiteboard itself now, no top-left pill noise. */
   .board-overlay {
     position: absolute;
-    top: 0.85rem; left: 0.85rem;
+    bottom: 5.4rem; left: 0.9rem;
     display: flex; flex-direction: column; gap: 0.4rem;
-    z-index: 3;
+    z-index: 4;
     pointer-events: none;
   }
   #splat-status {
-    background: white;
+    background: var(--peach);
     border: 2px solid var(--ink);
     border-radius: 100px;
     padding: 0.32rem 0.85rem;
@@ -560,9 +567,9 @@
     box-shadow: var(--shadow-sm);
     width: fit-content;
     transform: rotate(-2deg);
+    display: none;          /* only shown when data-kind="error" */
   }
-  #splat-status[data-kind="error"] { background: var(--peach); }
-  #splat-status[data-kind="ok"]    { background: var(--leaf); }
+  #splat-status[data-kind="error"] { display: block; }
 
   /* scribbled "live" tag on board */
   .board-live-tag {
@@ -1141,6 +1148,65 @@
     background: var(--leaf);
     color: var(--ink);
   }
+
+  /* connect hint — first-time nudge above the answer card / chat input.
+     Only rendered when the active backend needs a key and the user hasn't
+     set one. Hidden once dismissed; reappears if the backend is changed
+     to one that needs a key and the new one is empty. */
+  .connect-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    background: var(--sun-glow);
+    border: 2.4px solid var(--ink);
+    border-radius: 14px;
+    padding: 0.5rem 0.7rem 0.5rem 0.55rem;
+    box-shadow: var(--shadow);
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.85rem;
+    color: var(--ink);
+  }
+  .connect-hint[hidden] { display: none; }
+  .connect-hint__arrow {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--rose);
+    transform: rotate(45deg) translateY(-2px);
+    flex-shrink: 0;
+  }
+  .connect-hint__text { flex: 1; line-height: 1.35; }
+  .connect-hint__text strong { color: var(--ink); }
+  .connect-hint__open {
+    appearance: none;
+    background: var(--sun);
+    border: 2px solid var(--ink);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 0.12rem 0.55rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    margin: 0 0.1rem;
+    transition: transform .12s ease;
+  }
+  .connect-hint__open:hover  { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+  .connect-hint__open:active { transform: translate(1px, 1px);  box-shadow: 0 0 0 var(--ink); }
+  .connect-hint__x {
+    appearance: none;
+    background: white;
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    width: 26px; height: 26px;
+    line-height: 1;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+  }
+  .connect-hint__x:hover { background: var(--peach); }
 
   /* answer card — lives in the bottom row */
   .answer-card {
@@ -1734,8 +1800,9 @@
     .room-tag { display: none; }                /* not enough room */
     .wordmark { font-size: 1.25rem; padding: 0.22rem 0.65rem; }
 
-    /* expose the toggle buttons in the top-right corner */
-    .panel-toggles { display: flex; }
+    /* expose the chat/cork toggle buttons in the top-right corner (mobile-only) */
+    .panel-toggles #toggle-chat,
+    .panel-toggles #toggle-cork { display: inline-flex; }
 
     /* chat-thread + corkboard hidden by default; shown when toggled.
        When .open they cover most of the canvas as a sheet drawer. */
@@ -2255,6 +2322,19 @@
 
   <!-- ============ BOTTOM ROW: kid answer + chat input ============ -->
   <footer class="room-bottom">
+    <!-- one-time hint: appears only when the active backend needs an API key
+         and there isn't one set. nudges the visitor toward the gear without
+         demanding it. dismissable, but the gate is auto-applied on send. -->
+    <div id="connect-hint" class="connect-hint" hidden>
+      <span class="connect-hint__arrow" aria-hidden="true">↗</span>
+      <span class="connect-hint__text">
+        <strong>before you ask</strong> — pick how iris thinks. tap
+        <button type="button" class="connect-hint__open" id="connect-hint-open">⚙ settings</button>
+        — your key stays in this browser, never sent to us.
+      </span>
+      <button type="button" class="connect-hint__x" id="connect-hint-dismiss" aria-label="dismiss">×</button>
+    </div>
+
     <div class="answer-card">
       <p id="scene-answer-kid">…</p>
       <button type="button" id="share-btn" class="share-btn" aria-label="take a photo of the whiteboard" title="take a photo">
