@@ -467,10 +467,9 @@ function setupWelcome() {
     if (e.key === 'Enter') enterBtn.click();
   });
 
-  // show the modal on first visit; auto-skip if both prefs already set
+  // show the modal on first visit; auto-skip if a name's already saved
   if (savedName) {
     overlay.setAttribute('hidden', '');
-    settings?.removeAttribute('hidden');
   } else {
     overlay.removeAttribute('hidden');
     setTimeout(() => nameInp.focus(), 400);
