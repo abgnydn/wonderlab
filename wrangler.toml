@@ -5,8 +5,10 @@
 # WebLLM / LM Studio) runs in the visitor's browser, so there's nothing
 # server-side that could log or proxy a question or a key.
 #
-# Project on the Cloudflare dashboard is named "wonderlab".
+# `npm run build` mirrors the public-only files into ./public, then this
+# config tells Pages to deploy from that directory — so server/, scripts/,
+# drafts/ and the dev-only Node bits are physically excluded from the deploy.
 
-name              = "wonderlab"
-compatibility_date = "2025-12-01"
-pages_build_output_dir = "."
+name                   = "wonderlab"
+compatibility_date     = "2025-12-01"
+pages_build_output_dir = "./public"

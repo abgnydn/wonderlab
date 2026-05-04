@@ -76,9 +76,18 @@ npx wrangler pages project create wonderlab --production-branch main
 npm run deploy
 ```
 
-That's it. There are no environment variables to set, no Functions, no
-Workers — wonderlab is just static assets. Cloudflare's CDN does the
-work; the visitor's browser does the rest.
+`npm run deploy` runs `npm run build` first — that copies the
+public-only files (index.html, src/, system-prompt.txt, sw.js, OG image,
+favicon, _headers) into `./public/` and then asks wrangler to deploy
+that directory. server/, scripts/, package.json, drafts/ etc. never
+leave your machine.
+
+There are no environment variables to set, no Functions, no Workers —
+wonderlab is just static assets. Cloudflare's CDN does the work; the
+visitor's browser does the rest.
+
+If you change `og.svg`, regenerate the PNG with `npm run og` (uses
+`rsvg-convert`; install via `brew install librsvg` on macOS).
 
 ## Adding a new whiteboard shape
 

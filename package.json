@@ -11,11 +11,12 @@
     "url": "git+https://github.com/abgnydn/wonderlab.git"
   },
   "scripts": {
-    "dev":         "node server/server.js",
-    "dev:static":  "npx -y http-server@14 -p 5173 -c-1 .",
-    "deploy":      "wrangler pages deploy . --project-name wonderlab --branch main",
-    "deploy:preview": "wrangler pages deploy . --project-name wonderlab",
-    "og":          "node scripts/generate-og.mjs"
+    "dev":            "node server/server.js",
+    "dev:static":     "npx -y http-server@14 -p 5173 -c-1 .",
+    "build":          "node scripts/build.mjs",
+    "deploy":         "npm run build && wrangler pages deploy public --project-name wonderlab --branch main",
+    "deploy:preview": "npm run build && wrangler pages deploy public --project-name wonderlab",
+    "og":             "rsvg-convert -w 1200 -h 630 og.svg -o og.png"
   },
   "engines": {
     "node": ">=20"
