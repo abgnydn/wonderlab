@@ -1,51 +1,52 @@
 // =============================================================
-// scene.js — takes a SceneSpec and plays it.
-// Owns the macro (cartoon) layer, the micro (real-data) layer,
-// the zoom transition between them, and the interaction control.
+// scene.js — the SceneSpec layer (the whiteboard's content).
+// Holds macro+micro+zoom+slider, but does NOT own a renderer
+// and does NOT run its own animation loop. The owning LabScene
+// (lab-scene.js) calls tick() and render() each frame.
 // =============================================================
 
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { makeMacro } from './macro.js';
 import { makeMicro } from './micro.js';
 
 export class Scene {
-  constructor(canvas) {
-    this.canvas = canvas;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.renderer.setClearColor(0x000000, 0);
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+  /**
+   * @param {object} opts
+   * @param {THREE.WebGLRenderer} opts.renderer  shared external renderer
+   * @param {THREE.WebGLRenderTarget|null} opts.target  optional offscreen target
+   * @param {number} opts.aspect  initial aspect ratio (target width / height)
+   */
+  constructor({ renderer, target = null, aspect = 4 / 3 } = {}) {
+    if (!renderer) throw new Error('Scene needs a renderer');
+    this.renderer = renderer;
+    this.target   = target;
 
     this.world = new THREE.Scene();
-    this.cam = new THREE.PerspectiveCamera(40, 1, 0.05, 2000);
+    this.cam   = new THREE.PerspectiveCamera(40, aspect, 0.05, 2000);
     this.cam.position.set(0, 0, 12);
 
-    this.world.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const key = new THREE.DirectionalLight(0xfff2c8, 1.0); key.position.set(2, 3, 4); this.world.add(key);
-    const rim = new THREE.DirectionalLight(0xa8d0ff, 0.4); rim.position.set(-3, -1, -2); this.world.add(rim);
-
-    this.controls = new OrbitControls(this.cam, canvas);
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.08;
-    this.controls.enablePan = false;
-    this.controls.autoRotate = true;
-    this.controls.autoRotateSpeed = 0.4;
+    // 3-point lighting — warm key + cool fill + warm rim. Tuned so
+    // translucent macros (egg) read as egg and not as a fogged sphere.
+    this.world.add(new THREE.AmbientLight(0xffffff, 0.45));
+    const key = new THREE.DirectionalLight(0xfff5d4, 1.45);
+    key.position.set(3.5, 4.5, 5.5);
+    this.world.add(key);
+    const fill = new THREE.DirectionalLight(0xc8e0ff, 0.55);
+    fill.position.set(-4.5, 1.5, 3.5);
+    this.world.add(fill);
+    const rim = new THREE.DirectionalLight(0xffb98a, 0.4);
+    rim.position.set(0, 2, -5);
+    this.world.add(rim);
 
     this.macroGroup = new THREE.Group();
     this.microGroup = new THREE.Group();
     this.world.add(this.macroGroup, this.microGroup);
 
-    this.zoom = 0;          // 0 = macro, 1 = micro
+    this.zoom       = 0;          // 0 = macro, 1 = micro
     this.zoomTarget = 0;
-    this.value = 0;         // interaction slider value 0..1
-
-    this.fitCanvas();
-    new ResizeObserver(() => this.fitCanvas()).observe(canvas);
-    canvas.addEventListener('pointerdown', () => { this.controls.autoRotate = false; }, { once: true });
-
-    this._lastT = performance.now();
-    requestAnimationFrame(this._frame.bind(this));
+    this.value      = 0;          // slider 0..1
+    this.autoSpin   = true;       // gentle rotation when no user interaction
+    this._lastT     = performance.now();
   }
 
   async play(spec) {
@@ -60,85 +61,98 @@ export class Scene {
 
     this.macroGroup.add(this.macro.object);
     this.microGroup.add(this.micro.object);
-    this.microGroup.visible = false;
-    this.microGroup.scale.setScalar(0.0);
 
-    // Frame the macro shape.
     this._frameTo(this.macro.bounds);
     this.zoom = 0; this.zoomTarget = 0;
-
-    // Initial value 0 — apply once so the layers settle.
+    this._applyZoom();    // both layers visible from the first frame
     this.setValue(0);
   }
 
-  setZoom(target) {
-    this.zoomTarget = Math.max(0, Math.min(1, target));
-    // Once the user picks, stop auto-rotating so the transition reads cleanly.
-    this.controls.autoRotate = false;
-  }
-
+  setZoom(target)  { this.zoomTarget = Math.max(0, Math.min(1, target)); }
   setValue(v) {
     this.value = Math.max(0, Math.min(1, v));
     this.macro?.apply?.(this.spec.interaction.macro, this.value);
     this.micro?.apply?.(this.spec.interaction.micro, this.value);
   }
 
-  fitCanvas() {
-    const rect = this.canvas.getBoundingClientRect();
-    const w = Math.max(2, Math.floor(rect.width));
-    const h = Math.max(2, Math.floor(rect.height));
-    this.renderer.setSize(w, h, false);
-    this.cam.aspect = w / h;
+  /** Update camera aspect — call when target dimensions change. */
+  setAspect(aspect) {
+    this.cam.aspect = aspect;
     this.cam.updateProjectionMatrix();
   }
 
-  _frameTo(bounds) {
-    const r = bounds || 5;
-    this.cam.position.set(0, 0, r * 2.6);
-    this.controls.target.set(0, 0, 0);
-    this.controls.update();
-  }
-
-  _frame(now) {
+  /** Advance internal animations (zoom interpolation, macro/micro ticks, auto-rotation). */
+  tick(now) {
     const dt = Math.min(0.05, (now - this._lastT) / 1000);
     this._lastT = now;
     const t = now / 1000;
 
-    // Smooth zoom toward target.
+    // smooth zoom interpolation
     if (Math.abs(this.zoom - this.zoomTarget) > 0.001) {
       this.zoom += (this.zoomTarget - this.zoom) * Math.min(1, dt * 4);
       this._applyZoom();
     }
 
+    // gentle auto-spin so the shape feels alive
+    if (this.autoSpin) {
+      this.macroGroup.rotation.y += dt * 0.25;
+      this.microGroup.rotation.y += dt * 0.25;
+    }
+
     this.macro?.tick?.(t, this.value);
     this.micro?.tick?.(t, this.value);
+  }
 
-    this.controls.update();
+  /** Render this scene to its render target (or directly to the canvas if target is null).
+      Uses a warm-cream clear so the texture reads as a real whiteboard surface. */
+  render() {
+    const prevTarget = this.renderer.getRenderTarget();
+    const prevClear  = new THREE.Color();
+    this.renderer.getClearColor(prevClear);
+    const prevAlpha  = this.renderer.getClearAlpha();
+
+    this.renderer.setRenderTarget(this.target);
+    this.renderer.setClearColor(0xFCEFD2, 1.0);  // warm cream, like a sun-lit board
     this.renderer.render(this.world, this.cam);
-    requestAnimationFrame(this._frame.bind(this));
+
+    this.renderer.setRenderTarget(prevTarget);
+    this.renderer.setClearColor(prevClear, prevAlpha);
+  }
+
+  _frameTo(bounds) {
+    const r = bounds || 5;
+    this.cam.position.set(0, 0, r * 2.6);
+    this.cam.lookAt(0, 0, 0);
   }
 
   _applyZoom() {
+    // New behaviour: BOTH layers stay visible. The macro becomes the
+    // translucent everyday-object shell, the micro lives inside it.
+    // The slider drives both layers' effects directly; "zoom" is just
+    // a soft camera dolly + emphasis shift, never a blink toggle.
     const z = this.zoom;
-    // Macro fades out and slightly grows (camera "approaching the surface").
-    const macroAlpha = Math.max(0, 1 - z * 1.4);          // hits 0 by z ≈ 0.7
-    const macroScale = 1 + z * 0.6;
-    this.macroGroup.visible = macroAlpha > 0.01;
-    this.macroGroup.scale.setScalar(macroScale);
+
+    // Macro: always visible, fades from solid (0.92) at z=0 to a soft
+    // ghost (0.28) at z=1 so the inner mechanism reads through.
+    const macroAlpha = THREE.MathUtils.lerp(0.92, 0.28, z);
+    this.macroGroup.visible = true;
+    this.macroGroup.scale.setScalar(1);
     this.macro?.setOpacity?.(macroAlpha);
 
-    // Micro fades in starting around z = 0.4.
-    const microAlpha = Math.max(0, Math.min(1, (z - 0.4) / 0.6));
-    const microScale = 0.2 + microAlpha * 0.8;
-    this.microGroup.visible = microAlpha > 0.01;
-    this.microGroup.scale.setScalar(microScale);
-    this.micro?.setOpacity?.(microAlpha);
-
-    // Lerp camera framing between macro radius and micro radius.
+    // Micro: tucked INSIDE the macro at z=0 (small, opacity nudged up
+    // so it reads through the shell), grows to full size at z=1.
     const macroR = this.macro?.bounds ?? 5;
     const microR = this.micro?.bounds ?? 30;
-    const targetDist = THREE.MathUtils.lerp(macroR * 2.6, microR * 2.6 / Math.max(0.2, microScale), z);
-    const dir = this.cam.position.clone().sub(this.controls.target).normalize();
-    this.cam.position.copy(dir.multiplyScalar(targetDist).add(this.controls.target));
+    const startScale = Math.min(0.85, (macroR / Math.max(0.5, microR)) * 0.55);
+    const endScale   = 1.0;
+    const microScale = THREE.MathUtils.lerp(startScale, endScale, z);
+    this.microGroup.visible = true;
+    this.microGroup.scale.setScalar(microScale);
+    this.micro?.setOpacity?.(THREE.MathUtils.lerp(0.92, 1.0, z));
+
+    // Camera: dollies in toward the micro view as zoom rises.
+    const targetDist = THREE.MathUtils.lerp(macroR * 2.6, microR * endScale * 2.4, z);
+    this.cam.position.set(0, 0, targetDist);
+    this.cam.lookAt(0, 0, 0);
   }
 }

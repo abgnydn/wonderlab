@@ -2,8 +2,30 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>wonderlab — the lab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#F6E8C4">
+<meta name="color-scheme" content="light">
+<title>wonderlab — open scientific questions, in plain words</title>
+<meta name="description" content="A small lab room. A researcher waits at a whiteboard. Ask any question — they answer in plain words while drawing it live, then tag it against a real open scientific question.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://wonderlab.app/">
+
+<!-- Open Graph / Facebook / Slack / Discord -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://wonderlab.app/">
+<meta property="og:title" content="wonderlab — open scientific questions, in plain words">
+<meta property="og:description" content="A small lab room. A researcher answers your question in plain words while drawing it on the whiteboard, then ties it to a real open scientific question.">
+<meta property="og:image" content="https://wonderlab.app/og.svg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="wonderlab — open scientific questions, in plain words">
+<meta name="twitter:description" content="A small lab room. A researcher answers your question in plain words while drawing it on the whiteboard.">
+<meta name="twitter:image" content="https://wonderlab.app/og.svg">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Fredoka:wght@500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
@@ -55,8 +77,11 @@
     font-family: 'Nunito', sans-serif;
     font-weight: 600;
     line-height: 1.5;
-    min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: rgba(45,38,34,0.08);
     /* the wall — soft wallpaper of paper-pulp dots */
     background-image:
       radial-gradient(circle at 20% 30%, rgba(255,255,255,.35) 0 1px, transparent 1px),
@@ -79,77 +104,107 @@
   }
 
   /* =========================================================
-     ROOM LAYOUT
+     ROOM LAYOUT — canvas fills the viewport, HTML chrome is
+     minimal floating overlays. The lab IS the page.
   ========================================================= */
   .room {
     position: relative;
-    max-width: 1480px;
-    margin: 0 auto;
-    padding: 0 2.2rem 4rem;
     z-index: 2;
+    width: 100vw;
+    height: 100dvh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  /* The 3D canvas — fills everything beneath the overlays. */
+  .lab-stage {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+  .lab-stage #splat-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
   }
 
-  /* the sign on the wall (wordmark) */
+  /* the sign on the wall (wordmark) — floating top overlay */
   .room-sign {
-    position: relative;
+    position: absolute;
+    top: 0.9rem;
+    left: 0.9rem;
+    right: 0.9rem;
     z-index: 5;
-    padding: 1.3rem 0 0.4rem;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: 0.6rem;
+    pointer-events: none;
+    flex-wrap: nowrap;
+  }
+  .room-sign > * { pointer-events: auto; max-width: 100%; }
+  .room-sign .wordmark { flex-shrink: 0; }
+  /* room-tag entirely removed — strip its rules so any cached version never paints */
+  .room-tag, .room-tag::before { display: none !important; content: none !important; background: transparent !important; }
+
+  /* === MOBILE PANEL TOGGLES (only visible on small screens) === */
+  .panel-toggles {
+    position: absolute;
+    top: 0.9rem;
+    right: 0.9rem;
+    z-index: 6;
+    display: none;     /* shown only at mobile breakpoint */
+    gap: 0.4rem;
+  }
+  .panel-toggles button {
+    appearance: none;
+    border: 2.2px solid var(--ink);
+    background: white;
+    color: var(--ink);
+    border-radius: 100px;
+    padding: 0.4rem 0.85rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: transform .12s ease, box-shadow .12s ease, background .15s ease;
+  }
+  .panel-toggles button:active {
+    transform: translate(1px,1px);
+    box-shadow: 0 0 0 var(--ink);
+  }
+  .panel-toggles button.active {
+    background: var(--leaf);
   }
   .wordmark {
     font-family: 'Bagel Fat One', cursive;
-    font-size: 1.85rem;
-    letter-spacing: -1px;
+    font-size: 1.55rem;
+    letter-spacing: -0.5px;
     display: inline-flex;
     align-items: baseline;
     gap: 0.05em;
-    background: var(--cream);
-    border: 2.5px solid var(--ink);
-    border-radius: 14px;
-    padding: 0.35rem 0.95rem 0.45rem;
-    box-shadow: var(--shadow-sm);
-    transform: rotate(-1.5deg);
+    /* clean text logo — no chip background */
+    background: transparent;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+    transform: rotate(-1deg);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.6), 0 2px 4px rgba(45,38,34,0.18);
   }
   .wordmark .w1 { color: var(--ink); }
   .wordmark .w2 { color: var(--sky-deep); }
   .wordmark .w3 { color: var(--rose); margin-left: 0.05em; font-size: 0.8em; }
 
-  .room-tag {
-    font-family: 'Caveat', cursive;
-    font-size: 1.35rem;
-    color: var(--ink-soft);
-    transform: rotate(1deg);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .room-tag::before {
-    content: '';
-    width: 9px; height: 9px; border-radius: 50%;
-    background: #ED4F4F;
-    box-shadow: 0 0 0 2px var(--ink), 0 0 14px 3px rgba(237,79,79,.55);
-    animation: pulseDot 2.6s ease-in-out infinite;
-  }
-  @keyframes pulseDot {
-    0%, 100% { box-shadow: 0 0 0 2px var(--ink), 0 0 10px 2px rgba(237,79,79,.45); }
-    50%      { box-shadow: 0 0 0 2px var(--ink), 0 0 18px 5px rgba(237,79,79,.85); }
-  }
+  /* room-tag rules deleted — element is gone from the DOM */
 
   /* =========================================================
-     WALL — researcher + whiteboard + posters + lamp + clock
+     MAIN ROW — three columns: researcher | whiteboard | corkboard
   ========================================================= */
-  .wall {
-    position: relative;
-    display: grid;
-    grid-template-columns: minmax(260px, 320px) 1fr;
-    gap: 2.2rem;
-    align-items: end;
-    padding: 5rem 0 0;
-    margin-top: 0.6rem;
-  }
+  /* (kept just for backward CSS-selector compat; .wall is no longer
+     used as a layout container in the new no-scroll structure.) */
+  .wall { display: contents; }
 
   /* posters scattered across the wall, behind the action */
   .wall-posters {
@@ -210,17 +265,10 @@
   }
 
   /* =========================================================
-     RESEARCHER COLUMN
+     RESEARCHER COLUMN — hidden in the new full-canvas layout.
+     The 3D researcher is in the canvas; click on her to interact.
   ========================================================= */
-  .researcher-col {
-    position: relative;
-    z-index: 3;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.4rem;
-    padding-bottom: 0;
-  }
+  .researcher-col { display: none; }
 
   .researcher-bubble {
     position: relative;
@@ -252,6 +300,29 @@
     50% { opacity: 1; }
     100% { opacity: 0.3; }
   }
+  /* blinking marker-tip cursor while the reply is streaming */
+  .researcher-bubble .cursor {
+    display: inline-block;
+    width: 0.5ch;
+    height: 1em;
+    margin-left: 0.05em;
+    background: var(--rose);
+    border-radius: 1px;
+    transform: translateY(0.18em);
+    animation: cursorBlink 0.9s steps(2, end) infinite;
+  }
+  @keyframes cursorBlink {
+    0%, 49%   { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+  /* streaming chat bubble: tiny pulse on the border so the user sees it's still arriving */
+  .turn .them.is-streaming {
+    animation: streamPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes streamPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(45, 38, 34, 0); }
+    50%      { box-shadow: 0 0 0 2px rgba(232, 139, 130, 0.35); }
+  }
   .researcher-bubble::before {
     /* tail */
     content: '';
@@ -281,11 +352,16 @@
     100% { transform: rotate(-0.6deg) scale(1); }
   }
 
-  .researcher-figure {
+  /* The 2D SVG researcher is now hidden — the 3D researcher inside the
+     lab canvas (lab-scene.js) is the real one. SVG kept in DOM as a
+     fallback / accessibility hook but visually removed. */
+  .researcher-figure { display: none; }
+  .researcher-figure-legacy {
     width: 100%;
-    max-width: 270px;
+    max-width: 220px;
+    max-height: 60%;
     height: auto;
-    margin-top: 0.4rem;
+    margin-top: 0.2rem;
     filter: drop-shadow(3px 4px 0 var(--ink-soft));
     animation: idleBob 4.2s ease-in-out infinite;
   }
@@ -320,12 +396,12 @@
   }
 
   /* =========================================================
-     WHITEBOARD COLUMN
+     WHITEBOARD COLUMN — gone; the 3D canvas IS the lab.
+     The scene-question + slider/zoom controls live in the
+     canvas now (or auto-animate). The HTML wrapper is hidden.
   ========================================================= */
-  .board-col {
-    position: relative;
-    z-index: 2;
-  }
+  .board-col, .scene-question-wrap, .whiteboard, .marker-tray { display: none; }
+  #scene-question, .markers, .slider-row, #scene-zoom { display: none; }
 
   .lamp {
     position: absolute;
@@ -366,14 +442,15 @@
   /* the question scribbled at the top of the board */
   .scene-question-wrap {
     position: relative;
-    margin: 0 auto 0.7rem;
+    margin: 0 auto;
     text-align: center;
     z-index: 3;
+    flex-shrink: 0;
   }
   #scene-question {
     font-family: 'Caveat', cursive;
     font-weight: 700;
-    font-size: clamp(1.5rem, 2.4vw, 2.05rem);
+    font-size: clamp(1.2rem, 2vw, 1.7rem);
     color: var(--ink);
     line-height: 1.15;
     max-width: 760px;
@@ -384,19 +461,26 @@
   #scene-question::before { content: '“'; color: var(--rose); margin-right: 0.05em; }
   #scene-question::after  { content: '”'; color: var(--rose); margin-left: 0.05em; }
 
-  /* whiteboard frame */
+  /* whiteboard wrapper — wooden frame is now rendered IN the 3D canvas
+     by lab-scene.js, so the HTML wrapper is just a thin container. */
   .whiteboard {
     position: relative;
     margin: 0 auto;
-    background: linear-gradient(180deg, #E8DDC2, #D9C9A6);
-    border: 2.8px solid var(--ink);
-    border-radius: 20px;
-    padding: 18px;
-    box-shadow:
-      0 0 0 2px var(--cream-deep) inset,
-      var(--shadow-lg);
-    max-width: 880px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    width: 100%;
+    max-width: none;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
+  .whiteboard::before { display: none; }
+  .screw { display: none; }
   /* wood grain on frame */
   .whiteboard::before {
     content: '';
@@ -432,16 +516,17 @@
   .screw.bl { bottom: 6px; left: 6px; }
   .screw.br { bottom: 6px; right: 6px; }
 
-  /* board surface */
+  /* board surface — now just a clean container for the 3D lab canvas.
+     The lab itself draws the whiteboard, frame, walls, researcher, etc. */
   .whiteboard-surface {
     position: relative;
-    background: var(--board);
-    border: 2px solid var(--board-edge);
-    border-radius: 10px;
+    background: transparent;
+    border: 2.5px solid var(--ink);
+    border-radius: 14px;
     overflow: hidden;
-    aspect-ratio: 4 / 3;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.6),
-                inset 0 -2px 8px rgba(140,116,80,.18);
+    flex: 1;
+    min-height: 0;
+    box-shadow: var(--shadow-lg);
   }
 
   #splat-canvas {
@@ -450,8 +535,7 @@
     height: 100%;
     cursor: grab;
     touch-action: none;
-    background:
-      radial-gradient(circle at 30% 22%, #ffffff 0%, #FCEFD2 45%, #F4D9A0 100%);
+    background: #F6E8C4;   /* wallpaper colour while the GL context warms up */
   }
   #splat-canvas:active { cursor: grabbing; }
 
@@ -505,19 +589,20 @@
   #scene-aha {
     position: absolute;
     left: 50%;
-    bottom: 1.1rem;
-    transform: translate(-50%, 0.6rem);
+    top: 28%;                  /* upper-middle, near the whiteboard plane */
+    transform: translate(-50%, -0.6rem);
     background: var(--sun);
     border: 2.5px solid var(--ink);
     border-radius: 18px;
     padding: 0.7rem 1.1rem;
-    max-width: 78%;
+    max-width: clamp(220px, 56vw, 480px);
     box-shadow: var(--shadow);
     font-family: 'Fredoka', sans-serif;
     font-weight: 600;
     font-size: 1rem;
     line-height: 1.35;
-    z-index: 4;
+    text-align: center;
+    z-index: 7;
     opacity: 0;
     pointer-events: none;
     transition: opacity .35s ease, transform .35s ease;
@@ -535,17 +620,18 @@
   /* marker tray */
   .marker-tray {
     position: relative;
-    margin-top: 14px;
+    margin-top: 0;
+    flex-shrink: 0;
     background: linear-gradient(180deg, #C49565, #8B6240);
     border: 2.4px solid var(--ink);
-    border-radius: 8px 8px 16px 16px;
-    padding: 14px 18px 16px;
+    border-radius: 8px 8px 14px 14px;
+    padding: 8px 14px 10px;
     box-shadow:
       inset 0 2px 0 rgba(255,255,255,.18),
       inset 0 -3px 0 rgba(0,0,0,.18);
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     flex-wrap: wrap;
   }
   .markers {
@@ -619,9 +705,18 @@
   }
 
   /* =========================================================
-     DESK STRIP — mug, stack of papers, hint
+     DESK STRIP — removed for the no-scroll layout (was decorative).
+     The .desk container is hidden but kept in the DOM for now in
+     case any styling depends on it; safe to delete entirely.
   ========================================================= */
-  .desk {
+  .desk { display: none !important; }
+  .room-footer { display: none !important; }
+  .lamp { display: none !important; }
+  .wall-clock { display: none !important; }
+  .wall-posters { display: none !important; }
+
+  /* legacy desk styles kept harmless below in case any cascade hits them */
+  .desk-legacy-marker {
     position: relative;
     margin: 3rem 0 0;
     height: 110px;
@@ -706,20 +801,20 @@
   .desk-note b { color: var(--rose); font-weight: 700; }
 
   /* =========================================================
-     LOWER ROOM — corkboard + chat notepad
+     LOWER ROOM — replaced by the grid layout above. The .lower
+     wrapper now uses display:contents so its children land
+     directly in the room grid.
   ========================================================= */
-  .lower {
-    position: relative;
-    margin-top: 1.4rem;
-    display: grid;
-    grid-template-columns: 1.15fr 1fr;
-    gap: 2.2rem;
-    z-index: 2;
-  }
+  .lower { display: contents; }
 
-  /* === CORKBOARD === */
+  /* === CORKBOARD === floating right-side overlay panel */
   .corkboard {
-    position: relative;
+    position: absolute;
+    top: 4.6rem;
+    right: 0.9rem;
+    width: clamp(260px, 24vw, 340px);
+    max-height: calc(100dvh - 11rem);
+    z-index: 4;
     background:
       radial-gradient(circle at 20% 20%, rgba(255,255,255,.12) 0 1px, transparent 1px),
       radial-gradient(circle at 60% 40%, rgba(0,0,0,.06)    0 1px, transparent 1px),
@@ -729,61 +824,87 @@
     background-position: 0 0, 2px 1px, 1px 2px, 0 0;
     border: 3px solid var(--ink);
     border-radius: 14px;
-    padding: 1.6rem 1.2rem 1.4rem;
+    padding: 0.9rem 0.85rem 0.9rem;
     box-shadow:
       var(--shadow-lg),
       inset 0 0 0 4px rgba(168,118,69,.6),
       inset 0 0 30px rgba(94,53,20,.35);
-    min-height: 440px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
   }
   .corkboard-header {
     display: flex;
-    align-items: center;
-    gap: 0.7rem;
-    margin-bottom: 1rem;
-    padding: 0 0.4rem;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.7rem;
+    padding: 0 0.2rem;
+    flex-shrink: 0;
   }
   .corkboard-title {
     font-family: 'Bagel Fat One', cursive;
-    font-size: 1.4rem;
+    font-size: 1.15rem;
     letter-spacing: -0.5px;
     color: var(--cream);
     text-shadow: 2px 2px 0 var(--ink);
   }
   .corkboard-sub {
     font-family: 'Caveat', cursive;
-    font-size: 1.05rem;
+    font-size: 0.95rem;
     color: var(--cream-deep);
     transform: rotate(-1deg);
   }
 
   #question-pinboard {
-    /*
-      Cards/sticky-notes get inserted by JS (src/main.js) from
-      researcher-questions.js. Each card carries data-qid.
-      Style is .sticky and .sticky.<color>; JS picks color/rot.
-    */
+    /* sticky-notes inserted by JS (src/main.js) from researcher-questions.js. */
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1.3rem 1.1rem;
-    padding: 0.4rem 0.4rem 0.4rem;
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+    padding: 0.3rem 0.25rem 0.4rem;
   }
 
   .sticky {
     position: relative;
+    appearance: none;
     background: var(--sun);
     border: 2.4px solid var(--ink);
     border-radius: 4px;
-    padding: 1rem 0.85rem 0.95rem;
+    padding: 0.85rem 0.75rem 0.75rem;
     box-shadow: var(--shadow);
     cursor: pointer;
     transform: rotate(var(--rot, -2deg));
     transition: transform .18s ease, box-shadow .18s ease;
     font-family: 'Caveat', cursive;
-    font-size: 1.12rem;
-    line-height: 1.25;
+    font-size: 0.96rem;
+    line-height: 1.22;
     color: var(--ink);
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    word-wrap: break-word;
+    hyphens: auto;
   }
+  .sticky .badge,
+  .sticky .sticky-text,
+  .sticky .by {
+    display: block;
+    overflow-wrap: anywhere;
+    word-wrap: break-word;
+    max-width: 100%;
+  }
+  .sticky .badge { font-size: 0.62rem; padding: 0.16rem 0.45rem; margin-bottom: 0.4rem; }
+  .sticky .sticky-text { font-size: 1rem; line-height: 1.22; }
+  .sticky .by { font-size: 0.72rem; margin-top: 0.45rem; }
   .sticky:hover {
     transform: rotate(var(--rot, -2deg)) translate(-2px, -3px);
     box-shadow: var(--shadow-lg);
@@ -791,6 +912,10 @@
   .sticky:active {
     transform: rotate(var(--rot, -2deg)) translate(2px, 2px);
     box-shadow: var(--shadow-sm);
+  }
+  .sticky-text {
+    display: block;
+    margin-top: 0.1rem;
   }
   .sticky::before {
     content: '';
@@ -840,8 +965,106 @@
     padding: 2.5rem 1rem;
   }
 
-  /* === NOTEPAD (chat + answer) === */
-  .notepad {
+  /* =========================================================
+     ROOM BOTTOM — chat input centred over canvas.
+  ========================================================= */
+  .room-bottom {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: clamp(280px, 60vw, 640px);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+  /* answer card hidden by default — visible only when there is something to say */
+  .room-bottom .answer-card { display: none; }
+  .room-bottom .answer-card.visible { display: flex; }
+
+  /* legacy notepad styles disabled — preserved for any inherited targets */
+  .notepad, .notepad-inner, .notepad-tabs, .nptab { display: none; }
+
+  /* researcher speech bubble — hidden in the new layout. The chat
+     history overlay carries the latest reply now. */
+  .researcher-bubble { display: none; }
+
+  /* CONTROLS HINT — small floating chip telling the visitor how to walk */
+  .controls-hint {
+    position: absolute;
+    top: 4.6rem;
+    left: 0.9rem;
+    z-index: 4;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(6px);
+    border: 2px solid var(--ink);
+    border-radius: 100px;
+    padding: 0.45rem 0.85rem;
+    font-family: 'Caveat', cursive;
+    font-size: 1rem;
+    color: var(--ink-soft);
+    box-shadow: var(--shadow-sm);
+    pointer-events: none;
+    transform: rotate(-1deg);
+    opacity: 0.85;
+    transition: opacity 0.4s ease;
+  }
+  .controls-hint kbd {
+    display: inline-block;
+    background: var(--cream);
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    padding: 0.05em 0.35em;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.75rem;
+    margin: 0 1px;
+  }
+  .controls-hint.fade { opacity: 0; }
+
+  /* chat-thread overlay — turn styling */
+  #chat-thread .turn {
+    transition: opacity .9s ease, transform .9s ease, max-height .9s ease, margin .9s ease;
+  }
+  #chat-thread .turn.fading {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  #chat-thread .turn.gone {
+    opacity: 0;
+    transform: translateY(-12px);
+    max-height: 0;
+    margin: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  #chat-thread .turn .you,
+  #chat-thread .turn .them {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 0.92rem;
+    line-height: 1.4;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid var(--ink);
+    border-radius: 14px;
+    overflow-wrap: anywhere;
+    word-wrap: break-word;
+  }
+  #chat-thread .turn .you {
+    background: var(--sky);
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+    max-width: 92%;
+  }
+  #chat-thread .turn .them {
+    background: white;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    max-width: 92%;
+  }
+  #chat-thread .turn { display: flex; flex-direction: column; gap: 0.25rem; }
+  #chat-thread .turn .you-row  { align-self: flex-end;   max-width: 92%; }
+  #chat-thread .turn .them-row { align-self: flex-start; max-width: 92%; }
+  .notepad-legacy {
     position: relative;
     background: var(--cream);
     border: 2.8px solid var(--ink);
@@ -917,15 +1140,367 @@
     color: var(--ink);
   }
 
-  /* answer card on the pad */
+  /* answer card — lives in the bottom row */
   .answer-card {
     background: white;
-    border: 2.2px solid var(--ink);
-    border-radius: 10px;
-    padding: 0.8rem 1rem;
-    box-shadow: var(--shadow-sm);
-    margin-bottom: 0.9rem;
+    border: 2.4px solid var(--ink);
+    border-radius: 14px;
+    padding: 0.7rem 0.95rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-height: 0;
+    overflow: hidden;
   }
+  .answer-card #scene-answer-kid { flex: 1; }
+
+  /* share button — sits inside the answer card, only meaningful when an answer exists */
+  .share-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--sun);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 0.32rem 0.75rem 0.32rem 0.55rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 0.92rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+  }
+  .share-btn:hover  { background: var(--sun-deep); transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+  .share-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); }
+  .share-btn svg    { display: block; }
+
+  /* share modal */
+  /* gear button — tucked next to chat/questions toggles in the top bar */
+  #settings-btn {
+    appearance: none;
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    width: 32px; height: 32px;
+    background: var(--cream);
+    color: var(--ink);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm);
+    transition: transform .12s ease, background .15s ease, box-shadow .12s ease;
+    padding: 0;
+  }
+  #settings-btn:hover  { transform: rotate(30deg); background: var(--sun); }
+  #settings-btn:active { transform: rotate(60deg) translate(1px, 1px); box-shadow: 0 0 0 var(--ink); }
+
+  /* settings modal — heavier than the share modal, full-form */
+  .settings-modal {
+    position: fixed; inset: 0;
+    z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .settings-modal[hidden] { display: none; }
+  .settings-modal__backdrop {
+    position: absolute; inset: 0;
+    background: rgba(45, 38, 34, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .settings-modal__panel {
+    position: relative;
+    width: min(620px, 100%);
+    max-height: 92dvh;
+    overflow: auto;
+    background: var(--cream);
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    box-shadow: var(--shadow-lg);
+    padding: 1rem 1.1rem 1.1rem;
+    display: flex; flex-direction: column;
+    gap: 0.85rem;
+  }
+  .settings-modal__head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .settings-modal__head h2 {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 1.7rem;
+    margin: 0;
+    color: var(--ink);
+  }
+  .settings-modal__x {
+    width: 36px; height: 36px;
+    border-radius: 999px;
+    border: 2px solid var(--ink);
+    background: white;
+    font-size: 1.4rem; line-height: 1;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .settings-modal__x:hover { background: var(--peach); }
+
+  .settings-card {
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    background: white;
+    padding: 0.7rem 0.85rem;
+    box-shadow: var(--shadow-sm);
+    display: flex; flex-direction: column; gap: 0.55rem;
+  }
+  .settings-card--device { background: var(--sun-glow); }
+  .settings-card__title {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .settings-device {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.92rem;
+    color: var(--ink);
+  }
+  .settings-recommend {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+
+  .settings-backends {
+    display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .settings-backend {
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    padding: 0.55rem 0.7rem;
+    background: var(--cream);
+    cursor: pointer;
+    transition: background 0.12s ease, transform 0.08s ease, box-shadow 0.08s ease;
+  }
+  .settings-backend:hover { background: var(--sun-glow); transform: translate(-1px, -1px); box-shadow: 2px 2px 0 var(--ink); }
+  .settings-backend.is-selected { background: var(--sun); }
+  .settings-backend input { margin-top: 0.25rem; }
+  .settings-backend__body { display: flex; flex-direction: column; gap: 0.15rem; }
+  .settings-backend__label {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--ink);
+  }
+  .settings-backend__desc {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.84rem;
+    color: var(--ink-soft);
+  }
+
+  .settings-details {
+    display: flex; flex-direction: column; gap: 0.6rem;
+  }
+  .settings-field {
+    display: flex; flex-direction: column; gap: 0.3rem;
+  }
+  .settings-field label {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.86rem;
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .settings-field input,
+  .settings-field select {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.92rem;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    padding: 0.45rem 0.65rem;
+    background: var(--cream);
+    color: var(--ink);
+  }
+  .settings-field input:focus,
+  .settings-field select:focus {
+    outline: none;
+    box-shadow: var(--shadow-sm);
+  }
+  .settings-field__hint {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+  }
+  .settings-field__hint a { color: var(--rose); }
+
+  .settings-toggle-row {
+    display: flex; align-items: flex-start; gap: 0.7rem;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.92rem;
+    color: var(--ink);
+  }
+  .settings-toggle-row input { margin-top: 0.3rem; }
+  .settings-help {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  .settings-actions-row {
+    display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+  }
+  .settings-actions-row--end { justify-content: flex-end; }
+
+  .settings-action {
+    background: white;
+    color: var(--ink);
+    border: 2.4px solid var(--ink);
+    border-radius: 12px;
+    padding: 0.5rem 0.9rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 0.92rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+  }
+  .settings-action:hover  { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+  .settings-action:active { transform: translate(1px,  1px); box-shadow: 1px 1px 0 var(--ink); }
+  .settings-action--primary { background: var(--sun); }
+  .settings-action--primary:hover { background: var(--sun-deep); }
+  .settings-action[disabled] { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: var(--shadow-sm); }
+
+  .settings-status {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+    flex: 1;
+    min-height: 1.2em;
+  }
+  .settings-status[data-kind="ok"]    { color: var(--leaf-deep); font-weight: 700; }
+  .settings-status[data-kind="error"] { color: var(--rose); font-weight: 700; }
+
+  .settings-privacy {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.84rem;
+    color: var(--ink);
+    background: var(--leaf);
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    padding: 0.6rem 0.7rem;
+    line-height: 1.45;
+  }
+
+  .share-modal {
+    position: fixed; inset: 0;
+    z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .share-modal[hidden] { display: none; }
+  .share-modal__backdrop {
+    position: absolute; inset: 0;
+    background: rgba(45, 38, 34, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .share-modal__panel {
+    position: relative;
+    width: min(540px, 100%);
+    max-height: 92dvh;
+    overflow: auto;
+    background: var(--paper, #FCEFD2);
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    box-shadow: var(--shadow-lg);
+    padding: 1rem 1.1rem 1.1rem;
+    display: flex; flex-direction: column;
+    gap: 0.85rem;
+  }
+  .share-modal__head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .share-modal__head h2 {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 1.7rem;
+    margin: 0;
+    color: var(--ink);
+  }
+  .share-modal__x {
+    width: 36px; height: 36px;
+    border-radius: 999px;
+    border: 2px solid var(--ink);
+    background: white;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .share-modal__x:hover { background: var(--peach, #FFB7A8); }
+  .share-modal__preview {
+    background: rgba(0,0,0,0.04);
+    border: 2px dashed rgba(45,38,34,0.25);
+    border-radius: 12px;
+    padding: 0.65rem;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 200px;
+  }
+  .share-modal__preview canvas {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    display: block;
+  }
+  .share-modal__status {
+    min-height: 1.1em;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+  .share-modal__status[data-kind="ok"]    { color: var(--leaf, #6FB05C); font-weight: 700; }
+  .share-modal__status[data-kind="error"] { color: var(--accent, #E66363); font-weight: 700; }
+  .share-modal__actions {
+    display: flex; gap: 0.55rem; flex-wrap: wrap;
+    justify-content: center;
+  }
+  .share-action {
+    flex: 1 1 auto;
+    min-width: 110px;
+    background: white;
+    color: var(--ink);
+    border: 2.4px solid var(--ink);
+    border-radius: 12px;
+    padding: 0.55rem 0.9rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 0.35rem;
+    transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+  }
+  .share-action:hover  { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink); }
+  .share-action:active { transform: translate(1px,1px);  box-shadow: 1px 1px 0 var(--ink); }
+  .share-action--primary { background: var(--sun); }
+  .share-action--primary:hover { background: var(--sun-deep); }
+  .share-action[disabled] {
+    opacity: 0.45; cursor: not-allowed;
+    transform: none; box-shadow: var(--shadow-sm);
+  }
+  .share-action__ico { font-size: 1.05em; }
   #scene-answer-kid {
     font-family: 'Fredoka', sans-serif;
     font-weight: 500;
@@ -934,44 +1509,33 @@
     color: var(--ink);
     margin: 0;
   }
-  .answer-card details {
-    margin-top: 0.6rem;
-    border-top: 1.5px dashed var(--ink-soft);
-    padding-top: 0.5rem;
-  }
-  .answer-card summary {
-    cursor: pointer;
-    font-family: 'Fredoka', sans-serif;
-    font-weight: 700;
-    color: var(--ink-soft);
-    font-size: 0.82rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-  .answer-card summary::-webkit-details-marker { display: none; }
-  .answer-card summary::before {
-    content: '+';
-    font-family: 'Bagel Fat One', cursive;
-    font-size: 1.1rem;
-    color: var(--rose);
-  }
-  .answer-card details[open] summary::before { content: '–'; }
-  .answer-card details[open] summary { color: var(--ink); }
-  #scene-answer-real {
-    margin: 0.5rem 0 0;
-    font-family: 'Nunito', sans-serif;
-    font-weight: 600;
-    font-size: 0.92rem;
-    line-height: 1.55;
-    color: var(--ink-soft);
-  }
-
-  /* chat thread */
+  /* CHAT HISTORY OVERLAY — floating left-side panel.
+     Shows previous Q&A turns; the latest reply streams here. */
   #chat-thread {
+    position: absolute;
+    bottom: 6rem;
+    left: 0.9rem;
+    z-index: 4;
+    width: clamp(240px, 24vw, 340px);
+    max-height: calc(100dvh - 12rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 0.7rem 0.85rem;
+    background: rgba(252, 244, 228, 0.82);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 2.4px solid var(--ink);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    pointer-events: auto;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+  }
+  #chat-thread:empty { display: none; }
+  #chat-thread-legacy {
     flex: 1;
     overflow-y: auto;
     padding-right: 0.2rem;
@@ -1027,16 +1591,82 @@
   .turn .you-row { align-self: flex-end; max-width: 92%; }
   .turn .them-row { align-self: flex-start; max-width: 92%; }
 
-  /* chat input */
+  /* chat input — bottom row, full-height pill */
   .chat-input {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.45rem;
     background: white;
     border: 2.4px solid var(--ink);
     border-radius: 100px;
-    padding: 0.35rem 0.4rem 0.35rem 1rem;
+    padding: 0.4rem 0.5rem 0.4rem 1.1rem;
     box-shadow: var(--shadow);
     align-items: center;
+    min-height: 56px;
+  }
+  /* mic button — sits between input and send */
+  #mic-btn {
+    appearance: none;
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    background: var(--cream);
+    color: var(--ink);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+    transition: transform .12s ease, background .15s ease, box-shadow .12s ease;
+    padding: 0;
+  }
+  #mic-btn:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+  #mic-btn:active { transform: translate(1px, 1px); box-shadow: 0 0 0 var(--ink); }
+  #mic-btn.listening {
+    background: var(--rose);
+    color: white;
+    animation: micPulse 1.2s ease-in-out infinite;
+  }
+  #mic-btn.unsupported {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  @keyframes micPulse {
+    0%, 100% { box-shadow: var(--shadow-sm), 0 0 0 0 rgba(230, 99, 99, 0.55); }
+    50%      { box-shadow: var(--shadow-sm), 0 0 0 10px rgba(230, 99, 99, 0); }
+  }
+  /* draw toggle — chip in the chat-input row, between input and mic */
+  .draw-toggle {
+    appearance: none;
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    background: var(--cream);
+    color: var(--ink);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+    transition: transform .12s ease, background .15s ease, box-shadow .12s ease;
+    padding: 0;
+    position: relative;
+  }
+  .draw-toggle:hover  { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+  .draw-toggle:active { transform: translate(1px, 1px);  box-shadow: 0 0 0 var(--ink); }
+  .draw-toggle.is-on  { background: var(--sun); }
+  .draw-toggle.is-off { background: var(--cream); color: var(--ink-soft); }
+  .draw-toggle.is-off::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, transparent 46%, var(--ink-soft) 46%, var(--ink-soft) 54%, transparent 54%);
+    opacity: 0.55;
+    pointer-events: none;
   }
   #ask-input {
     flex: 1;
@@ -1082,35 +1712,274 @@
   }
 
   /* =========================================================
-     RESPONSIVE
+     RESPONSIVE — overlay layout, three breakpoints:
+       ≥1100px: full overlays — chat history left, corkboard right
+       700–1099: tablet — same overlays, narrower
+       ≤699: mobile — side panels collapse to toggles in top-right
+       ≤420: narrow phone — wordmark shrinks, status pill compacts
   ========================================================= */
-  @media (max-width: 1100px) {
-    .wall { grid-template-columns: 1fr; gap: 1.4rem; }
-    .researcher-col { flex-direction: row; align-items: flex-start; gap: 1rem; max-width: 100%; }
-    .researcher-bubble { max-width: 100%; flex: 1; margin-bottom: 0; transform: rotate(0); }
-    .researcher-bubble::before { left: auto; right: -16px; bottom: auto; top: 30%; transform: rotate(-45deg); }
-    .researcher-figure { max-width: 150px; margin-top: 0; flex-shrink: 0; }
-    .researcher-name { display: none; }
-    .lamp { width: 160px; top: -2.4rem; }
-    .lower { grid-template-columns: 1fr; }
-    .wall-clock { display: none; }
-    .poster.p-protein { left: auto; right: 4%; top: -0.8rem; }
-    .poster.p-stell, .poster.p-anti { display: none; }
+
+  /* tablet — narrower panels, smaller chat input */
+  @media (max-width: 1099px) {
+    .corkboard       { width: clamp(220px, 28vw, 280px); top: 4.4rem; right: 0.7rem; }
+    #chat-thread     { width: clamp(220px, 28vw, 280px); bottom: 5.6rem; left: 0.7rem; }
+    .room-bottom     { width: clamp(280px, 70vw, 560px); bottom: 0.85rem; }
+    .controls-hint   { top: 4.4rem; left: 0.7rem; font-size: 0.92rem; }
   }
-  @media (max-width: 700px) {
-    .room { padding: 0 1rem 3rem; }
-    .room-sign { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
-    .room-tag { font-size: 1.1rem; }
-    .researcher-col { flex-direction: column; align-items: center; }
-    .researcher-bubble::before { left: 30%; right: auto; top: auto; bottom: -16px; transform: rotate(45deg); }
-    .researcher-figure { max-width: 180px; }
-    .lamp { width: 130px; top: -1.6rem; }
-    .marker-tray { flex-direction: column; align-items: stretch; gap: 0.6rem; }
-    #scene-zoom { margin-left: 0; align-self: flex-start; }
-    .markers { justify-content: center; }
-    .desk { height: 88px; }
-    .desk-note { font-size: 0.9rem; }
-    #scene-question { font-size: 1.4rem; }
+
+  /* mobile — hide side panels, expose them via the toggle buttons */
+  @media (max-width: 699px) {
+    .room-tag { display: none; }                /* not enough room */
+    .wordmark { font-size: 1.25rem; padding: 0.22rem 0.65rem; }
+
+    /* expose the toggle buttons in the top-right corner */
+    .panel-toggles { display: flex; }
+
+    /* chat-thread + corkboard hidden by default; shown when toggled.
+       When .open they cover most of the canvas as a sheet drawer. */
+    #chat-thread, .corkboard {
+      display: none;
+    }
+    #chat-thread.open {
+      display: flex;
+      position: fixed;
+      inset: 4.5rem 0.6rem 5.4rem;
+      width: auto;
+      max-width: none;
+      max-height: none;
+      z-index: 30;
+    }
+    .corkboard.open {
+      display: flex;
+      position: fixed;
+      inset: 4.5rem 0.6rem 5.4rem;
+      width: auto;
+      max-width: none;
+      max-height: none;
+      z-index: 30;
+    }
+    .corkboard.open #question-pinboard {
+      grid-template-columns: 1fr;
+      gap: 0.7rem;
+    }
+
+    /* chat input full width-ish at the bottom */
+    .room-bottom {
+      width: calc(100vw - 1.2rem);
+      bottom: 0.6rem;
+      left: 0.6rem;
+      transform: none;
+    }
+
+    /* controls hint: only useful with a real keyboard. on touch
+       devices we replace it with a one-liner that fits */
+    .controls-hint {
+      top: 3.5rem;
+      left: 0.6rem;
+      font-size: 0.85rem;
+      padding: 0.32rem 0.65rem;
+    }
+    .controls-hint .desktop-only { display: none; }
+
+    /* status pill smaller */
+    .board-overlay { top: 0.6rem; left: 0.6rem; }
+    #splat-status { font-size: 0.72rem; padding: 0.22rem 0.6rem; }
+
+    /* chat input compact */
+    .chat-input { padding: 0.32rem 0.4rem 0.32rem 0.95rem; min-height: 48px; }
+    #ask-input { font-size: 16px; padding: 0.55rem 0; }    /* 16px prevents iOS auto-zoom */
+    #ask-submit { padding: 0.55rem 0.9rem; font-size: 0.95rem; }
+
+    /* sticky note text — give it some breathing room when shown as a sheet */
+    .sticky { font-size: 1.02rem; padding: 0.85rem 0.75rem 0.75rem; min-height: auto; }
+    .sticky .badge { font-size: 0.62rem; padding: 0.16rem 0.5rem; margin-bottom: 0.35rem; }
+    .sticky .by { font-size: 0.74rem; margin-top: 0.4rem; }
+
+    /* hide the controls hint entirely on touch devices — arrows aren't there */
+    @media (hover: none) and (pointer: coarse) {
+      .controls-hint { display: none; }
+    }
+
+    /* aha popup compact and above the chat input on phones */
+    #scene-aha { font-size: 0.9rem; padding: 0.5rem 0.7rem; max-width: 90%; top: auto; bottom: 5rem; transform: translate(-50%, 0.5rem); }
+    #scene-aha.show { transform: translate(-50%, 0); }
+  }
+
+  /* narrow phone — squeeze further */
+  @media (max-width: 420px) {
+    body { background-size: 22px 22px, 28px 28px, 18px 18px; }
+    .room-sign { top: 0.55rem; left: 0.55rem; right: 0.55rem; }
+    .panel-toggles { top: 0.55rem; right: 0.55rem; }
+    .panel-toggles button { padding: 0.32rem 0.7rem; font-size: 0.78rem; }
+    .wordmark { font-size: 1.15rem; padding: 0.2rem 0.55rem; transform: rotate(-1deg); }
+    #ask-input { padding: 0.5rem 0; }
+    #ask-submit { padding: 0.5rem 0.85rem; font-size: 0.92rem; }
+  }
+
+  /* =========================================================
+     WELCOME OVERLAY — first-visit name + voice picker
+  ========================================================= */
+  .welcome-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(252, 244, 228, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: welcomeFadeIn 0.4s ease-out;
+  }
+  @keyframes welcomeFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .welcome-overlay[hidden] { display: none !important; }
+
+  .welcome-card {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 22px;
+    padding: 1.6rem 2rem 1.8rem;
+    max-width: 460px;
+    width: 100%;
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+    animation: welcomeCardIn 0.5s cubic-bezier(.34, 1.56, .64, 1);
+  }
+  @keyframes welcomeCardIn {
+    from { transform: scale(0.92) translateY(20px); opacity: 0; }
+    to   { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  .welcome-iris {
+    margin: 0 auto 0.4rem;
+    width: 120px; height: 120px;
+    animation: irisBounce 2.4s ease-in-out infinite;
+  }
+  @keyframes irisBounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+  }
+
+  .welcome-title {
+    font-family: 'Bagel Fat One', cursive;
+    font-size: 1.8rem;
+    color: var(--ink);
+    margin: 0 0 0.4rem;
+    letter-spacing: -0.5px;
+  }
+  .welcome-title .wmark { color: var(--sky-deep); }
+  .welcome-title .wstar { color: var(--rose); margin-left: 0.05em; font-size: 0.85em; }
+
+  .welcome-line {
+    font-family: 'Caveat', cursive;
+    font-size: 1.25rem;
+    color: var(--ink-soft);
+    margin: 0.6rem 0 0.4rem;
+    line-height: 1.3;
+  }
+  .welcome-line strong { color: var(--ink); }
+  .welcome-line-sub { font-size: 1.1rem; margin-top: 0.9rem; }
+
+  #welcome-name-input {
+    appearance: none;
+    width: 100%;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-align: center;
+    color: var(--ink);
+    background: var(--cream);
+    border: 2.4px solid var(--ink);
+    border-radius: 100px;
+    padding: 0.6rem 1.1rem;
+    margin-top: 0.3rem;
+    box-shadow: var(--shadow-sm);
+    outline: none;
+  }
+  #welcome-name-input:focus {
+    background: white;
+    box-shadow: var(--shadow-sm), 0 0 0 3px rgba(124, 183, 208, 0.35);
+  }
+
+  .voice-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin: 0.5rem 0 1rem;
+  }
+  .voice-btn {
+    appearance: none;
+    background: var(--cream);
+    border: 2.2px solid var(--ink);
+    border-radius: 100px;
+    padding: 0.45rem 0.5rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--ink);
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: transform .12s ease, background .15s ease, box-shadow .12s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .voice-btn:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+  .voice-btn.selected {
+    background: var(--leaf);
+    font-weight: 700;
+  }
+
+  #welcome-enter {
+    appearance: none;
+    background: var(--rose);
+    color: white;
+    border: 3px solid var(--ink);
+    border-radius: 100px;
+    padding: 0.7rem 1.6rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    cursor: pointer;
+    margin-top: 0.4rem;
+    box-shadow: var(--shadow);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  #welcome-enter:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--ink); }
+  #welcome-enter:active { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink); }
+
+  /* Settings (gear) button — top-left, re-opens the welcome modal */
+  .settings-btn {
+    position: absolute;
+    top: 0.9rem;
+    left: 6.5rem;       /* sits right of the wordmark */
+    z-index: 5;
+    appearance: none;
+    background: white;
+    border: 2.2px solid var(--ink);
+    border-radius: 50%;
+    width: 36px; height: 36px;
+    color: var(--ink);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-sm);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .settings-btn:hover { transform: rotate(45deg); box-shadow: 3px 3px 0 var(--ink); }
+  .settings-btn[hidden] { display: none; }
+
+  /* mobile: tighten the welcome card */
+  @media (max-width: 520px) {
+    .welcome-card { padding: 1.3rem 1.2rem 1.4rem; max-width: 360px; }
+    .welcome-title { font-size: 1.5rem; }
+    .voice-grid { grid-template-columns: repeat(2, 1fr); }
+    .settings-btn { left: 5.5rem; width: 32px; height: 32px; }
   }
 
   /* footer */
@@ -1134,99 +2003,40 @@
     <div class="wordmark">
       <span class="w1">wonder</span><span class="w2">lab</span><span class="w3">✦</span>
     </div>
-    <div class="room-tag">the lab is open · come on in</div>
   </div>
 
-  <!-- ============ WALL: posters + lamp + clock + researcher + whiteboard ============ -->
-  <div class="wall">
-
-    <!-- posters pinned to the wall, behind everything -->
-    <div class="wall-posters" aria-hidden="true">
-
-      <!-- protein ribbon poster -->
-      <figure class="poster p-protein" style="width:120px;">
-        <svg viewBox="0 0 120 90" width="100%" height="auto">
-          <rect width="120" height="90" fill="#FFF8E8" />
-          <path d="M8 70 C 22 30, 36 80, 50 40 S 78 80, 92 35 S 116 70, 116 70"
-            fill="none" stroke="#7CB7D0" stroke-width="4" stroke-linecap="round"/>
-          <path d="M8 70 C 22 30, 36 80, 50 40 S 78 80, 92 35 S 116 70, 116 70"
-            fill="none" stroke="#2D2622" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="2 3"/>
-          <circle cx="22" cy="50" r="3" fill="#F8A5C2" stroke="#2D2622" stroke-width="1"/>
-          <circle cx="50" cy="40" r="3" fill="#FFD16B" stroke="#2D2622" stroke-width="1"/>
-          <circle cx="78" cy="62" r="3" fill="#B8DFA0" stroke="#2D2622" stroke-width="1"/>
-          <text x="6" y="14" font-family="Caveat, cursive" font-size="11" fill="#2D2622">α-helix</text>
-        </svg>
-        <figcaption>folds you can fold</figcaption>
-      </figure>
-
-      <!-- stellarator coils poster -->
-      <figure class="poster p-stell" style="width:130px;">
-        <svg viewBox="0 0 130 90" width="100%" height="auto">
-          <rect width="130" height="90" fill="#F4E8C9" />
-          <ellipse cx="65" cy="45" rx="45" ry="25" fill="none" stroke="#2D2622" stroke-width="2"/>
-          <ellipse cx="65" cy="45" rx="45" ry="25" fill="none" stroke="#7CB7D0" stroke-width="1.4"
-            stroke-dasharray="3 4" transform="rotate(20 65 45)"/>
-          <ellipse cx="65" cy="45" rx="45" ry="25" fill="none" stroke="#F8A5C2" stroke-width="1.4"
-            stroke-dasharray="3 4" transform="rotate(-20 65 45)"/>
-          <path d="M30 45 Q 65 20 100 45 Q 65 70 30 45" fill="none" stroke="#E66363" stroke-width="2"/>
-          <text x="6" y="14" font-family="Caveat, cursive" font-size="11" fill="#2D2622">stellarator</text>
-        </svg>
-        <figcaption>twisty plasma traps</figcaption>
-      </figure>
-
-      <!-- antibody Y poster -->
-      <figure class="poster p-anti" style="width:115px;">
-        <svg viewBox="0 0 115 95" width="100%" height="auto">
-          <rect width="115" height="95" fill="#FFFCEC" />
-          <line x1="57" y1="80" x2="57" y2="50" stroke="#2D2622" stroke-width="3"/>
-          <line x1="57" y1="50" x2="32" y2="20" stroke="#2D2622" stroke-width="3"/>
-          <line x1="57" y1="50" x2="82" y2="20" stroke="#2D2622" stroke-width="3"/>
-          <circle cx="32" cy="20" r="9" fill="#FFD16B" stroke="#2D2622" stroke-width="2"/>
-          <circle cx="82" cy="20" r="9" fill="#FFD16B" stroke="#2D2622" stroke-width="2"/>
-          <rect x="50" y="48" width="14" height="34" fill="#B5DCEB" stroke="#2D2622" stroke-width="2" rx="4"/>
-          <text x="6" y="14" font-family="Caveat, cursive" font-size="11" fill="#2D2622">IgG</text>
-        </svg>
-        <figcaption>tiny target-finders</figcaption>
-      </figure>
-
-      <!-- periodic table corner -->
-      <figure class="poster p-table" style="width:160px;">
-        <svg viewBox="0 0 160 56" width="100%" height="auto">
-          <g font-family="Fredoka, sans-serif" font-weight="700" stroke="#2D2622" stroke-width="1.6">
-            <rect x="4"  y="6" width="28" height="28" fill="#B8DFA0"/>
-            <text x="10" y="26" font-size="14" stroke="none" fill="#2D2622">C</text>
-            <rect x="36" y="6" width="28" height="28" fill="#B5DCEB"/>
-            <text x="42" y="26" font-size="14" stroke="none" fill="#2D2622">H</text>
-            <rect x="68" y="6" width="28" height="28" fill="#FFD16B"/>
-            <text x="74" y="26" font-size="14" stroke="none" fill="#2D2622">N</text>
-            <rect x="100" y="6" width="28" height="28" fill="#FFB7A8"/>
-            <text x="105" y="26" font-size="14" stroke="none" fill="#2D2622">O</text>
-            <rect x="132" y="6" width="24" height="28" fill="#F8A5C2"/>
-            <text x="137" y="26" font-size="13" stroke="none" fill="#2D2622">P</text>
-          </g>
-          <text x="4" y="50" font-family="Caveat, cursive" font-size="13" fill="#5C4A3F">the gang</text>
-        </svg>
-      </figure>
-
-    </div><!-- /wall-posters -->
-
-    <!-- wall clock -->
-    <div class="wall-clock" aria-hidden="true">
-      <svg viewBox="0 0 60 60" width="64" height="64">
-        <circle cx="30" cy="30" r="26" fill="#FFFCEC" stroke="#2D2622" stroke-width="2"/>
-        <g stroke="#2D2622" stroke-width="2" stroke-linecap="round">
-          <line x1="30" y1="8"  x2="30" y2="13"/>
-          <line x1="30" y1="47" x2="30" y2="52"/>
-          <line x1="8"  y1="30" x2="13" y2="30"/>
-          <line x1="47" y1="30" x2="52" y2="30"/>
-        </g>
-        <line x1="30" y1="30" x2="30" y2="14" stroke="#2D2622" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="30" y1="30" x2="42" y2="30" stroke="#E66363" stroke-width="2" stroke-linecap="round">
-          <animateTransform attributeName="transform" type="rotate" from="0 30 30" to="360 30 30" dur="60s" repeatCount="indefinite"/>
-        </line>
-        <circle cx="30" cy="30" r="2" fill="#2D2622"/>
+  <!-- mobile-only panel toggles — open chat history / corkboard as sheets -->
+  <div class="panel-toggles" aria-label="open panel">
+    <button type="button" id="toggle-chat"  aria-pressed="false">chat</button>
+    <button type="button" id="toggle-cork"  aria-pressed="false">questions</button>
+    <button type="button" id="settings-btn" aria-label="settings" title="settings">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
       </svg>
+    </button>
+  </div>
+
+  <!-- ============ THE LAB — full-viewport 3D canvas + its overlays ============ -->
+  <div class="lab-stage">
+    <canvas id="splat-canvas" width="1280" height="720" aria-label="the lab"></canvas>
+
+    <!-- a small status pill for loading/errors, positioned top-left of canvas -->
+    <div class="board-overlay">
+      <div id="splat-status">starting…</div>
     </div>
+
+    <!-- aha popup, fires when the auto-animation crosses the threshold -->
+    <div id="scene-aha"></div>
+
+    <!-- controls hint (auto-fades after a few seconds) -->
+    <div class="controls-hint" id="controls-hint">
+      <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> walk · <kbd>space</kbd> jump · drag look · click anything · 🎤 voice
+    </div>
+  </div>
+
+  <!-- ============ LEGACY (hidden but kept so main.js bindings don't break) ============ -->
+  <div class="wall" hidden>
 
     <!-- ============ RESEARCHER ============ -->
     <div class="researcher-col">
@@ -1341,22 +2151,6 @@
     <!-- ============ WHITEBOARD ============ -->
     <div class="board-col">
 
-      <!-- the lamp hanging above the board -->
-      <div class="lamp" aria-hidden="true">
-        <svg viewBox="0 0 220 120">
-          <!-- arm -->
-          <path d="M110 0 L110 30 L70 70" fill="none" stroke="#2D2622" stroke-width="3" stroke-linecap="round"/>
-          <circle cx="110" cy="30" r="6" fill="#FFD16B" stroke="#2D2622" stroke-width="2"/>
-          <!-- shade -->
-          <path d="M40 70 L100 70 L80 110 L20 110 Z"
-                fill="#F4B942" stroke="#2D2622" stroke-width="2.5" stroke-linejoin="round"/>
-          <path d="M22 110 L78 110" stroke="#2D2622" stroke-width="2" />
-          <ellipse cx="50" cy="110" rx="30" ry="3" fill="#FFE9A8"/>
-          <!-- bulb glow -->
-          <circle cx="50" cy="112" r="4" fill="#FFFFFF" opacity=".95"/>
-        </svg>
-      </div>
-
       <div class="scene-question-wrap">
         <p id="scene-question">…</p>
       </div>
@@ -1367,19 +2161,10 @@
         <span class="screw bl" aria-hidden="true"></span>
         <span class="screw br" aria-hidden="true"></span>
 
-        <div class="whiteboard-surface">
-          <div class="lamp-glow" aria-hidden="true"></div>
-
-          <canvas id="splat-canvas" width="800" height="600" aria-label="the whiteboard"></canvas>
-
-          <div class="board-overlay">
-            <div id="splat-status">starting…</div>
-          </div>
-
-          <span class="board-live-tag" aria-hidden="true">live</span>
-
-          <div id="scene-aha"></div>
-        </div>
+        <!-- the canvas + overlays moved up to .lab-stage; this wrapper
+             is now empty inside a hidden .wall and just exists so we
+             don't have to ripple-delete every legacy descendant style. -->
+        <div class="whiteboard-surface" hidden></div>
 
         <!-- marker tray + controls -->
         <div class="marker-tray">
@@ -1398,13 +2183,11 @@
     </div><!-- /board-col -->
   </div><!-- /wall -->
 
-  <!-- ============ DESK STRIP ============ -->
-  <div class="desk" aria-hidden="false">
-    <div class="desk-surface" aria-hidden="true"></div>
-    <div class="desk-items">
-
-      <!-- coffee mug with steam -->
-      <div class="mug">
+  <!-- ============ DESK STRIP REMOVED — was decorative, didn't fit no-scroll ============ -->
+  <div class="desk" hidden aria-hidden="true"><!-- intentionally empty -->
+    <div class="desk-surface" hidden></div>
+    <div class="desk-items" hidden>
+      <div class="mug" hidden>
         <svg class="steam" viewBox="0 0 42 42">
           <path d="M14 34 Q10 26 16 18 Q22 10 18 4"/>
           <path d="M22 36 Q26 28 22 20 Q18 12 24 4"/>
@@ -1452,7 +2235,7 @@
     <div class="corkboard">
       <div class="corkboard-header">
         <h2 class="corkboard-title">the corkboard</h2>
-        <span class="corkboard-sub">— questions real researchers are stuck on</span>
+        <span class="corkboard-sub">— big tricky questions, in plain words</span>
       </div>
 
       <!--
@@ -1466,39 +2249,168 @@
       </div>
     </div>
 
-    <!-- notepad: chat thread + answer card + chat input -->
-    <div class="notepad">
-      <div class="notepad-inner">
-        <div class="notepad-tabs">
-          <span class="nptab active">chat</span>
-          <span class="nptab">answer</span>
-        </div>
-
-        <!-- answer card (kid + 'show me the real science' expand) -->
-        <div class="answer-card">
-          <p id="scene-answer-kid">…</p>
-          <details>
-            <summary>show me the real science</summary>
-            <p id="scene-answer-real">…</p>
-          </details>
-        </div>
-
-        <!-- chat thread (Q&A turns) -->
-        <div id="chat-thread"></div>
-
-        <!-- input -->
-        <form class="chat-input" id="ask-form" autocomplete="off">
-          <input id="ask-input" type="text" placeholder="ask the researcher anything…" />
-          <button id="ask-submit" type="submit">send →</button>
-        </form>
-      </div>
-    </div>
-
   </section>
 
-  <p class="room-footer">
-    made with <span>♥</span> in the lab · everything you see runs on your own machine
-  </p>
+  <!-- ============ BOTTOM ROW: kid answer + chat input ============ -->
+  <footer class="room-bottom">
+    <div class="answer-card">
+      <p id="scene-answer-kid">…</p>
+      <button type="button" id="share-btn" class="share-btn" aria-label="take a photo of the whiteboard" title="take a photo">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 7h3l2-2.5h6L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        <span>share</span>
+      </button>
+    </div>
+
+    <form class="chat-input" id="ask-form" autocomplete="off">
+      <input id="ask-input" type="text" inputmode="text" autocomplete="off" autocapitalize="sentences" placeholder="ask anything you wonder about…" />
+      <button id="draw-toggle" type="button" class="draw-toggle is-on" aria-pressed="true" title="iris draws on the whiteboard">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+          <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+          <path d="M2 2l7.586 7.586"/>
+          <circle cx="11" cy="11" r="2"/>
+        </svg>
+      </button>
+      <button id="mic-btn" type="button" aria-label="ask by voice" title="ask by voice">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="9" y="2" width="6" height="12" rx="3"/>
+          <path d="M5 11a7 7 0 0 0 14 0"/>
+          <line x1="12" y1="18" x2="12" y2="22"/>
+          <line x1="9"  y1="22" x2="15" y2="22"/>
+        </svg>
+      </button>
+      <button id="ask-submit" type="submit">send →</button>
+    </form>
+  </footer>
+
+  <!-- chat thread kept in DOM (hidden via CSS) so main.js callsites keep working -->
+  <div id="chat-thread" hidden></div>
+
+  <!-- ============ SETTINGS MODAL ============ -->
+  <div id="settings-modal" class="settings-modal" hidden role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="settings-modal__backdrop" data-close></div>
+    <div class="settings-modal__panel">
+      <header class="settings-modal__head">
+        <h2 id="settings-title">⚙ settings</h2>
+        <button type="button" class="settings-modal__x" data-close aria-label="close">×</button>
+      </header>
+
+      <!-- DEVICE BANNER (auto-detected, used to recommend a backend) -->
+      <div class="settings-card settings-card--device">
+        <div class="settings-card__title">your device</div>
+        <div class="settings-device" id="settings-device-line">checking…</div>
+        <div class="settings-recommend" id="settings-recommend"></div>
+        <button type="button" id="settings-apply-rec" class="settings-action settings-action--primary">use recommendation</button>
+      </div>
+
+      <!-- BACKEND PICKER -->
+      <div class="settings-card">
+        <div class="settings-card__title">how to ask iris</div>
+        <div class="settings-backends" id="settings-backends">
+          <!-- radios injected here at open time -->
+        </div>
+      </div>
+
+      <!-- PER-BACKEND DETAILS (key, model, url) -->
+      <div class="settings-card" id="settings-details-card">
+        <div class="settings-card__title">backend settings</div>
+        <div class="settings-details" id="settings-details"></div>
+        <div class="settings-actions-row">
+          <button type="button" id="settings-test" class="settings-action">test connection</button>
+          <span class="settings-status" id="settings-test-status"></span>
+        </div>
+      </div>
+
+      <!-- IMAGE TOGGLE (lifted into settings too, mirrors the chip in chat-input) -->
+      <div class="settings-card">
+        <label class="settings-toggle-row">
+          <input type="checkbox" id="settings-draw-toggle">
+          <span>
+            <strong>draw illustrations on the whiteboard</strong>
+            <span class="settings-help">off = text-only mode (much faster, works on small/local models)</span>
+          </span>
+        </label>
+      </div>
+
+      <!-- PRIVACY NOTE -->
+      <div class="settings-privacy">
+        <strong>your data, your machine.</strong>
+        wonderlab is 100% static — your question goes from this browser straight to the provider you picked.
+        we don't have a server, don't log, store, or proxy anything. your API key lives in this browser only.
+      </div>
+
+      <div class="settings-actions-row settings-actions-row--end">
+        <button type="button" id="settings-save" class="settings-action settings-action--primary">save &amp; close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SHARE MODAL ============ -->
+  <div id="share-modal" class="share-modal" hidden role="dialog" aria-modal="true" aria-labelledby="share-modal-title">
+    <div class="share-modal__backdrop" data-close></div>
+    <div class="share-modal__panel">
+      <header class="share-modal__head">
+        <h2 id="share-modal-title">📷 photo of the whiteboard</h2>
+        <button type="button" class="share-modal__x" data-close aria-label="close">×</button>
+      </header>
+      <div class="share-modal__preview" id="share-preview-host"></div>
+      <div class="share-modal__status" id="share-status"></div>
+      <div class="share-modal__actions">
+        <button type="button" id="share-download" class="share-action">
+          <span class="share-action__ico">⬇</span> download
+        </button>
+        <button type="button" id="share-copy" class="share-action">
+          <span class="share-action__ico">⧉</span> copy
+        </button>
+        <button type="button" id="share-native" class="share-action share-action--primary">
+          <span class="share-action__ico">↗</span> share
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ WELCOME OVERLAY (first-visit name + voice picker) ============ -->
+  <div class="welcome-overlay" id="welcome-overlay" hidden>
+    <div class="welcome-card">
+      <div class="welcome-iris" aria-hidden="true">
+        <svg viewBox="0 0 120 120" width="120" height="120">
+          <ellipse cx="60" cy="115" rx="40" ry="4" fill="#5C4A3F" opacity=".25"/>
+          <ellipse cx="60" cy="60"  rx="40" ry="48" fill="#fbd2b0" stroke="#2D2622" stroke-width="2.5"/>
+          <path d="M22 38 Q 18 12 60 8 Q 102 12 98 38 Q 100 50 92 60 Q 88 50 80 56 Q 70 48 60 56 Q 50 48 40 56 Q 32 50 28 60 Q 20 50 22 38 Z" fill="#6b4226" stroke="#2D2622" stroke-width="2"/>
+          <g fill="none" stroke="#2D2622" stroke-width="2.4">
+            <circle cx="48" cy="58" r="9"/><circle cx="72" cy="58" r="9"/>
+            <line x1="57" y1="57" x2="63" y2="57" stroke-width="2.6"/>
+          </g>
+          <circle cx="48" cy="58" r="3.8" fill="#2D2622"/><circle cx="72" cy="58" r="3.8" fill="#2D2622"/>
+          <circle cx="49.5" cy="56.5" r="1.3" fill="#fff"/><circle cx="73.5" cy="56.5" r="1.3" fill="#fff"/>
+          <ellipse cx="36" cy="72" rx="6" ry="4" fill="#FF9B94" opacity=".75"/>
+          <ellipse cx="84" cy="72" rx="6" ry="4" fill="#FF9B94" opacity=".75"/>
+          <path d="M50 82 Q 60 88 70 82" fill="none" stroke="#C56565" stroke-width="2.5" stroke-linecap="round"/>
+          <ellipse cx="80" cy="14" rx="9" ry="5" fill="#FF8AAD" stroke="#2D2622" stroke-width="1.8"/>
+          <circle cx="80" cy="14" r="2.5" fill="#E0688D" stroke="#2D2622" stroke-width="1.6"/>
+        </svg>
+      </div>
+      <h2 class="welcome-title">welcome to <span class="wmark">wonderlab</span><span class="wstar">✦</span></h2>
+      <p class="welcome-line">hi! i'm iris. <strong>what should i call you?</strong></p>
+      <input type="text" id="welcome-name-input" placeholder="your name…" maxlength="24" autocomplete="off" />
+      <p class="welcome-line welcome-line-sub">pick how my voice sounds:</p>
+      <div class="voice-grid" id="voice-grid">
+        <!-- populated by main.js so it can reflect the current selection -->
+      </div>
+      <button id="welcome-enter" type="button">step into the lab ✦</button>
+    </div>
+  </div>
+
+  <!-- small settings button (top-left) that re-opens the modal -->
+  <button class="settings-btn" id="settings-btn" type="button" aria-label="settings" hidden>
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </button>
 </div>
 
 <!-- ============ THREE.JS / SCENE WIRING ============ -->
