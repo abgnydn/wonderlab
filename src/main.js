@@ -287,7 +287,7 @@ async function ask(question) {
     audio.squeak();           // pen squeak as the new scene paints
     // iris reads her reply aloud — show the talking pose while she speaks
     scene.setSpeaking?.(true);
-    audio.speak(spec._reply);
+    maybeSpeak(spec._reply);
     // poll: when speech ends, drop back to idle pose
     const settle = () => {
       if (typeof window !== 'undefined' && window.speechSynthesis?.speaking) {
@@ -346,10 +346,22 @@ function hydratePinboard() {
 // -----------------------------------------------------------
 const PREF_NAME  = 'wonderlab.name';
 const PREF_VOICE = 'wonderlab.voice';
+const PREF_VOICE_ON = 'wonderlab.voiceOn';   // master "iris speaks aloud" toggle
 
 function getName()       { try { return localStorage.getItem(PREF_NAME) || ''; } catch { return ''; } }
 function setName(n)      { try { localStorage.setItem(PREF_NAME, n); } catch {} }
 function getStoredVoice(){ try { return localStorage.getItem(PREF_VOICE) || 'af_heart'; } catch { return 'af_heart'; } }
+
+// Off by default — Kokoro stays the picked voice, but iris doesn't auto-speak
+// every reply unless the visitor turns this on in settings.
+function getVoiceOn()    { try { return localStorage.getItem(PREF_VOICE_ON) === '1'; } catch { return false; } }
+function setVoiceOn(on)  { try { localStorage.setItem(PREF_VOICE_ON, on ? '1' : '0'); } catch {} }
+// Single chokepoint: every audio.speak() in this file goes through here so we
+// can gate it with one preference + always release the speaking pose.
+function maybeSpeak(text) {
+  if (!getVoiceOn()) return;
+  audio.speak(text);
+}
 
 // Whether iris should generate an illustration (SVG) for the whiteboard, or
 // just produce text (faster + works on small/local models). Source of truth
@@ -426,6 +438,11 @@ function setupWelcome() {
       b.classList.add('selected');
       // preview — set voice and speak a tiny line
       audio.setVoice(pickedVoice);
+      // voice preview is the one place we ALWAYS speak regardless of master
+      // toggle — picking a voice is meaningless if you can't hear it. We also
+      // flip the toggle on while previewing so the visitor's first action is
+      // an explicit consent.
+      setVoiceOn(true);
       audio.speak("hi! it's me.");
     });
     grid.appendChild(b);
@@ -437,7 +454,7 @@ function setupWelcome() {
     audio.setVoice(pickedVoice);
     overlay.setAttribute('hidden', '');
     // greet by name + repaint the welcome whiteboard with the name
-    setTimeout(() => audio.speak(`hi ${name}! welcome to the lab.`), 350);
+    setTimeout(() => maybeSpeak(`hi ${name}! welcome to the lab.`), 350);
     const thread = $('chat-thread');
     if (thread) thread.innerHTML = '';
     seedOpening();
@@ -488,7 +505,7 @@ function reactToObjectClick(kind) {
   else                 audio.click();
   // iris speaks the line — talking pose while she does
   scene.setSpeaking?.(true);
-  audio.speak(text);
+  maybeSpeak(text);
   setTimeout(() => {
     const tick = () => {
       if (typeof window !== 'undefined' && window.speechSynthesis?.speaking) setTimeout(tick, 200);
@@ -699,6 +716,16 @@ function rebuildSettingsContents() {
   if (drawT) {
     drawT.checked = getDrawPreference();
     drawT.onchange = () => { setDrawPreference(drawT.checked); };
+  }
+
+  // voice toggle (master "iris speaks aloud" switch — off by default)
+  const voiceT = $('settings-voice-toggle');
+  if (voiceT) {
+    voiceT.checked = getVoiceOn();
+    voiceT.onchange = () => {
+      setVoiceOn(voiceT.checked);
+      if (!voiceT.checked) audio.shutUp?.();   // cut off any in-flight TTS
+    };
   }
 }
 
