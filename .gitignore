@@ -2,6 +2,19 @@
 node_modules/
 .env
 .env.*
+!.env.example
 *.log
 .vscode/
 .idea/
+
+# build / cache
+dist/
+.cache/
+.wrangler/
+.cloudflare/
+
+# os / editor noise
+.AppleDouble
+.LSOverride
+Thumbs.db
+*.swp

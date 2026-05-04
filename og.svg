@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#FCEFD2"/>
+      <stop offset="100%" stop-color="#F4E8C9"/>
+    </linearGradient>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="65%">
+      <stop offset="0%"  stop-color="rgba(0,0,0,0)"/>
+      <stop offset="100%" stop-color="rgba(45,38,34,0.18)"/>
+    </radialGradient>
+  </defs>
+
+  <!-- paper -->
+  <rect width="1200" height="630" fill="url(#paper)"/>
+  <rect width="1200" height="630" fill="url(#vignette)"/>
+
+  <!-- wordmark + spark -->
+  <g transform="translate(70 80)">
+    <text x="0" y="0" font-family="Caveat, 'Brush Script MT', cursive" font-weight="700" font-size="72" fill="#2D2622" dominant-baseline="hanging">wonder<tspan fill="#E66363">lab</tspan></text>
+    <g transform="translate(280 32)">
+      <path d="M0 -22 L5 -5 L22 0 L5 5 L0 22 L-5 5 L-22 0 L-5 -5 Z"
+            fill="#FFD16B" stroke="#2D2622" stroke-width="2.5" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- tagline -->
+  <text x="1130" y="100" text-anchor="end" font-weight="600" font-size="22" fill="#5C4A3F" dominant-baseline="hanging">
+    asked by a kid · drawn by a researcher
+  </text>
+
+  <!-- big handwritten headline -->
+  <text x="70" y="220" font-family="Caveat, 'Brush Script MT', cursive" font-weight="700" font-size="86" fill="#2D2622" dominant-baseline="hanging">
+    "why does cheese melt?"
+  </text>
+
+  <!-- whiteboard frame mockup with a tiny illustration -->
+  <g transform="translate(70 320)">
+    <rect width="640" height="240" rx="14" fill="#b98e62"/>
+    <rect x="14" y="14" width="612" height="212" fill="#FFFCEC"/>
+    <!-- a wedge -->
+    <g transform="translate(180 70)">
+      <polygon points="0,140 240,140 130,0" fill="#FFD16B" stroke="#2D2622" stroke-width="4" stroke-linejoin="round"/>
+      <circle cx="80"  cy="100" r="12" fill="#E66363" stroke="#2D2622" stroke-width="2.5"/>
+      <circle cx="150" cy="80"  r="9"  fill="#7CB7D0" stroke="#2D2622" stroke-width="2.5"/>
+      <circle cx="170" cy="120" r="10" fill="#6FB05C" stroke="#2D2622" stroke-width="2.5"/>
+    </g>
+    <!-- small label -->
+    <text x="320" y="200" font-family="Caveat, cursive" font-weight="700" font-size="28" fill="#2D2622" text-anchor="middle">soft, warm, stretchy</text>
+    <!-- screws -->
+    <circle cx="20"  cy="20"  r="4" fill="#7E5635"/>
+    <circle cx="620" cy="20"  r="4" fill="#7E5635"/>
+    <circle cx="20"  cy="220" r="4" fill="#7E5635"/>
+    <circle cx="620" cy="220" r="4" fill="#7E5635"/>
+  </g>
+
+  <!-- sticky note: how researchers say it -->
+  <g transform="translate(760 320) rotate(-1)">
+    <rect width="370" height="240" rx="6" fill="#FFE4A8" stroke="rgba(45,38,34,0.10)" stroke-width="2"/>
+    <rect x="115" y="-12" width="140" height="24" fill="rgba(124,183,208,0.55)"/>
+    <text x="22" y="36" font-family="Caveat, cursive" font-weight="700" font-size="34" fill="#2D2622" dominant-baseline="hanging">how researchers say it →</text>
+    <text x="22" y="100" font-weight="500" font-size="22" fill="#5C4A3F" dominant-baseline="hanging">
+      <tspan x="22" dy="0">molecular dynamics of</tspan>
+      <tspan x="22" dy="32">protein-fat interactions</tspan>
+      <tspan x="22" dy="32">across temperature gradients</tspan>
+    </text>
+    <text x="22" y="208" font-weight="700" font-size="20" fill="#E66363" dominant-baseline="hanging">— Hugging Science / TDC</text>
+  </g>
+
+  <!-- footer url -->
+  <text x="70" y="585" font-weight="700" font-size="22" fill="#2D2622">wonderlab.app</text>
+  <text x="1130" y="585" text-anchor="end" font-weight="500" font-size="20" fill="#5C4A3F">open scientific questions, in plain words</text>
+</svg>

@@ -1,0 +1,37 @@
+# wonderlab — Cloudflare Pages headers
+# https://developers.cloudflare.com/pages/configuration/headers/
+
+# everything else: hash-stable assets are immutable for one day; the SW
+# refreshes the index.html shell so users still get updates promptly.
+
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(self), geolocation=()
+
+# the html shell — never long-cache, otherwise updates take days to roll out
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# system prompt — fetched once per session by every connector, fine to cache
+/system-prompt.txt
+  Cache-Control: public, max-age=86400
+
+# JS modules — no fingerprinting yet (could add a build step), so short cache
+/src/*
+  Cache-Control: public, max-age=600
+
+# the service worker — must update on every visit, never cache
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+# don't accidentally serve the dev server / package metadata
+/server/*
+  X-Robots-Tag: noindex
+/package.json
+  X-Robots-Tag: noindex
+/wrangler.toml
+  X-Robots-Tag: noindex
+/.env*
+  X-Robots-Tag: noindex

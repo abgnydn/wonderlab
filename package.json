@@ -1,0 +1,26 @@
+{
+  "name": "wonderlab",
+  "version": "0.1.0",
+  "description": "A small lab room you walk into. Ask any question and a researcher answers in plain words while drawing on a 3D whiteboard. Translation-layer demo for Hugging Science benchmarks.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "homepage": "https://wonderlab.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abgnydn/wonderlab.git"
+  },
+  "scripts": {
+    "dev":         "node server/server.js",
+    "dev:static":  "npx -y http-server@14 -p 5173 -c-1 .",
+    "deploy":      "wrangler pages deploy . --project-name wonderlab --branch main",
+    "deploy:preview": "wrangler pages deploy . --project-name wonderlab",
+    "og":          "node scripts/generate-og.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "wrangler": "^3.95.0"
+  }
+}

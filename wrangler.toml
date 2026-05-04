@@ -1,0 +1,12 @@
+# wonderlab — Cloudflare Pages config.
+#
+# wonderlab is 100% static: index.html + src/* + system-prompt.txt.
+# No Functions, no Workers, no servers. Every connector (Claude / Gemini /
+# WebLLM / LM Studio) runs in the visitor's browser, so there's nothing
+# server-side that could log or proxy a question or a key.
+#
+# Project on the Cloudflare dashboard is named "wonderlab".
+
+name              = "wonderlab"
+compatibility_date = "2025-12-01"
+pages_build_output_dir = "."
