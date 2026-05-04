@@ -95,12 +95,12 @@ export function ambient(on) {
     src.loop   = true;
     const lp = c.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.value = 520;     // dark, cozy
+    lp.frequency.value = 380;     // darker — the music sits on top now
     const g = c.createGain();
     g.gain.value = 0.0;            // start silent, fade in
     src.connect(lp).connect(g).connect(c.destination);
     src.start();
-    g.gain.linearRampToValueAtTime(0.05, c.currentTime + 1.5);
+    g.gain.linearRampToValueAtTime(0.025, c.currentTime + 1.5);   // half as loud as before
     _ambient = { src, gain: g };
   } else if (!on && _ambient) {
     const { src, gain } = _ambient;
@@ -109,6 +109,136 @@ export function ambient(on) {
     _ambient = null;
   }
 }
+
+// =============================================================
+// Procedural ambient music — three layers, all generated at runtime,
+// no audio assets. Goal: gentle, pleasant, infinite, kid-safe.
+//
+//   • drone  — long sustained low note, slowly drifting (the "room")
+//   • melody — sparse single notes from C major pentatonic
+//              (always sounds pleasant, can't pick a "wrong" note)
+//   • chime  — every ~10s, a soft music-box ping high up
+//
+// All layers feed a master gain → a gentle 4th-order lowpass → output,
+// so nothing ever sounds harsh or piercing.
+// =============================================================
+
+// C major pentatonic across two and a bit octaves — the safest "always
+// sounds nice" scale. Children's-music staple for a reason.
+const PENTATONIC_HZ = [
+  261.63, 293.66, 329.63, 392.00, 440.00,         // C4 D4 E4 G4 A4
+  523.25, 587.33, 659.25, 783.99, 880.00,         // C5 D5 E5 G5 A5
+  1046.50,                                          // C6
+];
+const DRONE_HZ = 130.81;   // C3 — a quiet floor under everything
+
+let _music = null;
+
+function _scheduleMelodyNote() {
+  if (!_music) return;
+  const c = ctx(); if (!c) return;
+  const freq = PENTATONIC_HZ[Math.floor(Math.random() * PENTATONIC_HZ.length)];
+  const osc = c.createOscillator();
+  osc.type = Math.random() < 0.55 ? 'triangle' : 'sine';
+  osc.frequency.value = freq;
+
+  const g = c.createGain();
+  const pan = c.createStereoPanner();
+  pan.pan.value = (Math.random() - 0.5) * 0.7;
+
+  const now = c.currentTime;
+  const peak = 0.04 + Math.random() * 0.025;
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(peak,    now + 0.18);   // slow attack
+  g.gain.exponentialRampToValueAtTime(0.0001,  now + 3.6);    // long decay
+
+  osc.connect(g).connect(pan).connect(_music.bus);
+  osc.start(now);
+  osc.stop(now + 3.8);
+
+  // 30% chance of a soft companion a perfect-5th up — never harsh
+  if (Math.random() < 0.3) {
+    const o2 = c.createOscillator();
+    o2.type = 'sine';
+    o2.frequency.value = freq * 1.5;
+    const g2 = c.createGain();
+    g2.gain.setValueAtTime(0.0001, now);
+    g2.gain.exponentialRampToValueAtTime(peak * 0.55, now + 0.28);
+    g2.gain.exponentialRampToValueAtTime(0.0001,      now + 3.4);
+    o2.connect(g2).connect(pan).connect(_music.bus);
+    o2.start(now + 0.04);
+    o2.stop(now + 3.5);
+  }
+
+  // schedule next melody note: 1.8–5s gap → never crowded
+  const next = 1800 + Math.random() * 3200;
+  _music.melodyTimer = setTimeout(_scheduleMelodyNote, next);
+}
+
+function _scheduleChimePing() {
+  if (!_music) return;
+  const c = ctx(); if (!c) return;
+  // pick a sparkly note in the upper register
+  const freq = PENTATONIC_HZ[6 + Math.floor(Math.random() * 5)];
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  const g = c.createGain();
+  const now = c.currentTime;
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.05,   now + 0.02);   // fast attack
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 5.0);    // very long decay
+  osc.connect(g).connect(_music.bus);
+  osc.start(now);
+  osc.stop(now + 5.2);
+
+  const next = 9000 + Math.random() * 7000;       // every 9–16s
+  _music.chimeTimer = setTimeout(_scheduleChimePing, next);
+}
+
+export function music(on) {
+  const c = ctx(); if (!c) return;
+  if (on && !_music) {
+    // master bus → gentle lowpass → main out
+    const bus = c.createGain();
+    bus.gain.value = 0.0;
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 4500;
+    bus.connect(lp).connect(c.destination);
+
+    // drone: two slightly-detuned sines on C3 with very slow LFO on the
+    // gain so it breathes
+    const d1 = c.createOscillator(); d1.type = 'sine'; d1.frequency.value = DRONE_HZ;
+    const d2 = c.createOscillator(); d2.type = 'sine'; d2.frequency.value = DRONE_HZ * 1.005;
+    const dg = c.createGain(); dg.gain.value = 0.018;
+    const lfo = c.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.07;
+    const lfoGain = c.createGain(); lfoGain.gain.value = 0.012;
+    lfo.connect(lfoGain).connect(dg.gain);
+    d1.connect(dg); d2.connect(dg); dg.connect(bus);
+    d1.start(); d2.start(); lfo.start();
+
+    _music = { bus, drone: [d1, d2, lfo], melodyTimer: null, chimeTimer: null };
+    bus.gain.linearRampToValueAtTime(1.0, c.currentTime + 2.0);
+
+    // start the two timed layers (slight initial delay so the drone
+    // settles in before notes start landing)
+    setTimeout(_scheduleMelodyNote, 2000 + Math.random() * 1500);
+    setTimeout(_scheduleChimePing,  6000 + Math.random() * 3000);
+  } else if (!on && _music) {
+    if (_music.melodyTimer) clearTimeout(_music.melodyTimer);
+    if (_music.chimeTimer)  clearTimeout(_music.chimeTimer);
+    _music.bus.gain.linearRampToValueAtTime(0, c.currentTime + 1.0);
+    const drone = _music.drone;
+    setTimeout(() => {
+      try { for (const o of drone) o.stop(); } catch {}
+      try { _music.bus.disconnect(); } catch {}
+    }, 1100);
+    _music = null;
+  }
+}
+
+export function isMusicOn() { return !!_music; }
 
 // Pick the cutest English voice the browser offers.
 // Modern browsers ship neural voices that sound human, but they're not

@@ -356,6 +356,11 @@ function getStoredVoice(){ try { return localStorage.getItem(PREF_VOICE) || 'af_
 // every reply unless the visitor turns this on in settings.
 function getVoiceOn()    { try { return localStorage.getItem(PREF_VOICE_ON) === '1'; } catch { return false; } }
 function setVoiceOn(on)  { try { localStorage.setItem(PREF_VOICE_ON, on ? '1' : '0'); } catch {} }
+
+// Music ON by default — gentle procedural ambient, totally non-vocal.
+const PREF_MUSIC_ON = 'wonderlab.musicOn';
+function getMusicOn()   { try { const v = localStorage.getItem(PREF_MUSIC_ON); return v == null ? true : v === '1'; } catch { return true; } }
+function setMusicOn(on) { try { localStorage.setItem(PREF_MUSIC_ON, on ? '1' : '0'); } catch {} }
 // Single chokepoint: every audio.speak() in this file goes through here so we
 // can gate it with one preference + always release the speaking pose.
 function maybeSpeak(text) {
@@ -742,6 +747,16 @@ function rebuildSettingsContents() {
       if (!voiceT.checked) audio.shutUp?.();   // cut off any in-flight TTS
     };
   }
+
+  // music toggle (procedural ambient — on by default)
+  const musicT = $('settings-music-toggle');
+  if (musicT) {
+    musicT.checked = getMusicOn();
+    musicT.onchange = () => {
+      setMusicOn(musicT.checked);
+      audio.music?.(musicT.checked);
+    };
+  }
 }
 
 // Inline help block shown when LM Studio is selected on the live (HTTPS)
@@ -1063,6 +1078,7 @@ async function main() {
   // First click/keypress anywhere wakes it up + starts the ambient hum.
   const wakeAudio = () => {
     audio.ambient(true);
+    if (getMusicOn()) audio.music?.(true);
     window.removeEventListener('pointerdown', wakeAudio);
     window.removeEventListener('keydown',     wakeAudio);
   };
