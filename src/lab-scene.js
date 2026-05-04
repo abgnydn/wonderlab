@@ -51,15 +51,21 @@ const BOARD_H   = 4.4;
 const TARGET_W  = 1024;
 const TARGET_H  = 720;
 
-// the researcher's anchor — standing near her whiteboard (back wall) so
-// she's the first thing the visitor sees walking into the room. Sits
-// well behind the desk's apron so nothing visually clips her legs.
+// the researcher's anchor — standing right next to her whiteboard so
+// she's the first thing the visitor sees walking into the room.
 //   • whiteboard centre is at (1.4, 2.5, -6.79); back wall at z=-7
-//   • RES_Z = -5.0 places her ~2 units in front of the board
-//   • RES_X = -3.0 keeps her plane (1.8 wide) just past the whiteboard's
-//     left edge (~-1.8), so they sit side-by-side without overlap
-const RES_X = -3.0;
-const RES_Z = -5.0;
+//   • RES_Z = -6.0 places her ~0.8 units in front of the board (close
+//     enough to read as "her board"). Important: any z > -5.4 puts the
+//     desk top in the camera ray to her feet (the desk slab at y≈1.04
+//     occludes her bottom half from the default camera angle), so she
+//     has to live behind the desk in z, not beside it in x.
+//   • RES_X = +4.0 puts her on the RIGHT side of the whiteboard (the
+//     visitor's "look at the board" view shows board-then-iris, left
+//     to right). Plane (1.8 wide) spans 3.1..4.9, just clipping the
+//     whiteboard's right edge (4.6) for the "presenter at her board"
+//     read.
+const RES_X =  4.0;
+const RES_Z = -6.0;
 
 export class LabScene {
   constructor(canvas) {
