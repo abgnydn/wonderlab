@@ -30,7 +30,7 @@ export const lmstudioConnector = {
     if (location.protocol === 'https:' && /^http:\/\//i.test(u)) {
       return {
         ok: false,
-        error: 'browsers block http://localhost from https pages — open wonderlab on http (dev) or run LM Studio behind HTTPS',
+        error: 'browsers block http→https; see the help card under the URL field for three fixes',
       };
     }
     // probe /v1/models

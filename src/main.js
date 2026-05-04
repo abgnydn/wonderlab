@@ -673,18 +673,31 @@ function rebuildSettingsContents() {
       }
       // url field for LM Studio
       if (conn.id === 'lmstudio') {
+        const onHttps = location.protocol === 'https:';
+        const url = settings.lmstudioUrl || 'http://localhost:1234/v1/chat/completions';
+        const isHttpUrl = /^http:\/\//i.test(url);
+        const blocked = onHttps && isHttpUrl;
         const wrap = document.createElement('div');
         wrap.className = 'settings-field';
         wrap.innerHTML = `
           <label for="settings-url-lmstudio">LM Studio URL</label>
           <input id="settings-url-lmstudio" type="text" placeholder="http://localhost:1234/v1/chat/completions" value="${escapeAttr(settings.lmstudioUrl || '')}"/>
-          <div class="settings-field__hint">browsers block http→https; if wonderlab is on cloudflare, run it locally to use this</div>
+          <div class="settings-field__hint">point this at your LM Studio "Local Server" URL — usually <code>http://localhost:1234/v1/chat/completions</code></div>
+          ${blocked ? lmstudioMixedContentHelp() : ''}
         `;
         det.appendChild(wrap);
         wrap.querySelector('input').addEventListener('input', (e) => {
           const s = loadSettings();
           s.lmstudioUrl = e.target.value;
           saveSettings(s);
+        });
+        // wire copy buttons inside the help block
+        wrap.querySelectorAll('[data-copy]').forEach((b) => {
+          b.addEventListener('click', async () => {
+            const t = b.getAttribute('data-copy');
+            try { await navigator.clipboard.writeText(t); b.textContent = 'copied!'; setTimeout(() => b.textContent = 'copy', 1400); }
+            catch {}
+          });
         });
       }
       // model picker
@@ -729,6 +742,45 @@ function rebuildSettingsContents() {
       if (!voiceT.checked) audio.shutUp?.();   // cut off any in-flight TTS
     };
   }
+}
+
+// Inline help block shown when LM Studio is selected on the live (HTTPS)
+// site. The browser physically blocks https → http://localhost ("mixed
+// content") and there's no server-side fix — only the visitor can break
+// the wall. Three concrete escape hatches, easiest first.
+function lmstudioMixedContentHelp() {
+  return `
+    <div class="lmstudio-help">
+      <div class="lmstudio-help__title">⚠ your browser blocks https → http://localhost</div>
+      <p class="lmstudio-help__lede">that's a security rule, not a wonderlab bug. three ways out — easiest first:</p>
+
+      <ol class="lmstudio-help__list">
+        <li>
+          <strong>run wonderlab locally</strong> — the dev server runs on plain http, so it can talk to localhost without a fight:
+          <pre><code>git clone https://github.com/abgnydn/wonderlab
+cd wonderlab
+npm run dev:static    <span class="muted"># http://localhost:5173</span></code>
+          <button type="button" class="lmstudio-help__copy" data-copy="git clone https://github.com/abgnydn/wonderlab
+cd wonderlab
+npm run dev:static">copy</button></pre>
+        </li>
+
+        <li>
+          <strong>Chrome flag</strong> — paste this into a new tab, add <code>http://localhost:1234</code>, set to <em>Enabled</em>, restart Chrome:
+          <pre><code>chrome://flags/#unsafely-treat-insecure-origin-as-secure</code><button type="button" class="lmstudio-help__copy" data-copy="chrome://flags/#unsafely-treat-insecure-origin-as-secure">copy</button></pre>
+          then reload wonderlab. the live site can now reach your LM Studio.
+        </li>
+
+        <li>
+          <strong>cloudflared tunnel</strong> — wraps localhost:1234 in a real https URL:
+          <pre><code>cloudflared tunnel --url http://localhost:1234</code><button type="button" class="lmstudio-help__copy" data-copy="cloudflared tunnel --url http://localhost:1234">copy</button></pre>
+          paste the printed <code>https://….trycloudflare.com</code> URL into the field above (don't forget the <code>/v1/chat/completions</code> suffix).
+        </li>
+      </ol>
+
+      <p class="lmstudio-help__foot">side note: LM Studio's <em>"Enable CORS"</em> toggle has to be on too — otherwise the browser refuses the cross-origin call regardless of all this.</p>
+    </div>
+  `;
 }
 
 function keyHint(id) {

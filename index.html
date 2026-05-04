@@ -1404,6 +1404,91 @@
     color: var(--ink-soft);
   }
   .settings-field__hint a { color: var(--rose); }
+  .settings-field__hint code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.78rem;
+    background: rgba(45,38,34,0.08);
+    padding: 0.05rem 0.32rem;
+    border-radius: 4px;
+  }
+
+  /* LM Studio mixed-content help — inline card under the URL field */
+  .lmstudio-help {
+    margin-top: 0.5rem;
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    background: var(--peach);
+    padding: 0.65rem 0.8rem 0.7rem;
+    box-shadow: var(--shadow-sm);
+    font-family: 'Nunito', sans-serif;
+    color: var(--ink);
+  }
+  .lmstudio-help__title {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 0.92rem;
+    margin-bottom: 0.4rem;
+  }
+  .lmstudio-help__lede {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+  }
+  .lmstudio-help__list {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+  .lmstudio-help__list li strong { font-family: 'Fredoka', sans-serif; }
+  .lmstudio-help__list code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.78rem;
+    background: rgba(45,38,34,0.10);
+    padding: 0.05rem 0.32rem;
+    border-radius: 4px;
+  }
+  .lmstudio-help__list pre {
+    position: relative;
+    margin: 0.32rem 0 0;
+    padding: 0.55rem 4.5rem 0.55rem 0.7rem;
+    background: rgba(45,38,34,0.08);
+    border: 1px solid rgba(45,38,34,0.15);
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  .lmstudio-help__list pre code {
+    background: transparent;
+    padding: 0;
+    font-size: 0.78rem;
+    white-space: pre;
+  }
+  .lmstudio-help__list pre .muted { color: var(--ink-soft); }
+  .lmstudio-help__copy {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    appearance: none;
+    background: white;
+    color: var(--ink);
+    border: 1.6px solid var(--ink);
+    border-radius: 999px;
+    padding: 0.18rem 0.55rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 0.7rem;
+    cursor: pointer;
+    box-shadow: 1px 1px 0 var(--ink);
+  }
+  .lmstudio-help__copy:hover { background: var(--sun); }
+  .lmstudio-help__foot {
+    margin: 0.55rem 0 0;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
 
   .settings-toggle-row {
     display: flex; align-items: flex-start; gap: 0.7rem;
