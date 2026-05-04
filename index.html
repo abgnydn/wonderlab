@@ -1704,38 +1704,9 @@
     0%, 100% { box-shadow: var(--shadow-sm), 0 0 0 0 rgba(230, 99, 99, 0.55); }
     50%      { box-shadow: var(--shadow-sm), 0 0 0 10px rgba(230, 99, 99, 0); }
   }
-  /* draw toggle — chip in the chat-input row, between input and mic */
-  .draw-toggle {
-    appearance: none;
-    border: 2px solid var(--ink);
-    border-radius: 50%;
-    width: 38px;
-    height: 38px;
-    background: var(--cream);
-    color: var(--ink);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    box-shadow: var(--shadow-sm);
-    transition: transform .12s ease, background .15s ease, box-shadow .12s ease;
-    padding: 0;
-    position: relative;
-  }
-  .draw-toggle:hover  { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
-  .draw-toggle:active { transform: translate(1px, 1px);  box-shadow: 0 0 0 var(--ink); }
-  .draw-toggle.is-on  { background: var(--sun); }
-  .draw-toggle.is-off { background: var(--cream); color: var(--ink-soft); }
-  .draw-toggle.is-off::after {
-    content: "";
-    position: absolute;
-    inset: 4px;
-    border-radius: 50%;
-    background: linear-gradient(45deg, transparent 46%, var(--ink-soft) 46%, var(--ink-soft) 54%, transparent 54%);
-    opacity: 0.55;
-    pointer-events: none;
-  }
+  /* draw-illustrations toggle now lives only in the settings modal —
+     the chat-input chip was removed because its round badge competed
+     with the settings gear visually. */
   #ask-input {
     flex: 1;
     appearance: none;
@@ -2347,12 +2318,6 @@
 
     <form class="chat-input" id="ask-form" autocomplete="off">
       <input id="ask-input" type="text" inputmode="text" autocomplete="off" autocapitalize="sentences" placeholder="ask anything you wonder about…" />
-      <button id="draw-toggle" type="button" class="draw-toggle is-on" aria-pressed="true" title="iris draws on the whiteboard">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M3 21l3.6-1L20 6.6 17.4 4 4 17.4 3 21z"/>
-          <path d="M14 7l3 3"/>
-        </svg>
-      </button>
       <button id="mic-btn" type="button" aria-label="ask by voice" title="ask by voice">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <rect x="9" y="2" width="6" height="12" rx="3"/>

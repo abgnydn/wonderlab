@@ -707,16 +707,7 @@ function rebuildSettingsContents() {
   const drawT = $('settings-draw-toggle');
   if (drawT) {
     drawT.checked = getDrawPreference();
-    drawT.onchange = () => {
-      setDrawPreference(drawT.checked);
-      // keep the chip in sync
-      const chip = $('draw-toggle');
-      if (chip) {
-        chip.classList.toggle('is-on',  drawT.checked);
-        chip.classList.toggle('is-off', !drawT.checked);
-        chip.setAttribute('aria-pressed', drawT.checked ? 'true' : 'false');
-      }
-    };
+    drawT.onchange = () => { setDrawPreference(drawT.checked); };
   }
 }
 
@@ -827,40 +818,8 @@ function setupSettings() {
       cur.models[conn.id] = conn.models[0].id;
       saveSettings(cur);
     }
-    // sync the draw toggle chip
-    const chip = $('draw-toggle');
-    if (chip) {
-      const on = getDrawPreference();
-      chip.classList.toggle('is-on', on);
-      chip.classList.toggle('is-off', !on);
-      chip.setAttribute('aria-pressed', on ? 'true' : 'false');
-    }
-    // and the first-time hint
+    // first-time hint
     refreshConnectHint();
-  });
-}
-
-// -----------------------------------------------------------
-// draw toggle — chip next to the chat input. ON = full SceneSpec
-// (the illustration is drawn). OFF = text-only mode (notepad
-// rendering on the whiteboard, much faster, works on small models).
-// -----------------------------------------------------------
-function setupDrawToggle() {
-  const btn = $('draw-toggle');
-  if (!btn) return;
-  const apply = () => {
-    const on = getDrawPreference();
-    btn.classList.toggle('is-on',  on);
-    btn.classList.toggle('is-off', !on);
-    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    btn.title = on
-      ? 'illustration on — iris will draw on the whiteboard'
-      : 'illustration off — text-only on the whiteboard (faster)';
-  };
-  apply();
-  btn.addEventListener('click', () => {
-    setDrawPreference(!getDrawPreference());
-    apply();
   });
 }
 
@@ -985,7 +944,6 @@ async function main() {
   setupWelcome();
   seedOpening();
   setupSettings();
-  setupDrawToggle();
   setupShare();
 
   // Audio context can't start until the user interacts with the page.
