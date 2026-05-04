@@ -405,7 +405,6 @@ function setupWelcome() {
   const grid     = $('voice-grid');
   const nameInp  = $('welcome-name-input');
   const enterBtn = $('welcome-enter');
-  const settings = $('settings-btn');
   if (!overlay || !grid || !nameInp || !enterBtn) return;
 
   const savedName  = getName();
@@ -437,7 +436,6 @@ function setupWelcome() {
     setName(name);
     audio.setVoice(pickedVoice);
     overlay.setAttribute('hidden', '');
-    settings?.removeAttribute('hidden');
     // greet by name + repaint the welcome whiteboard with the name
     setTimeout(() => audio.speak(`hi ${name}! welcome to the lab.`), 350);
     const thread = $('chat-thread');
@@ -450,13 +448,6 @@ function setupWelcome() {
   // pressing Enter in the name input also enters
   nameInp.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') enterBtn.click();
-  });
-
-  // settings gear — re-open the modal so the visitor can change name/voice later
-  settings?.addEventListener('click', () => {
-    overlay.removeAttribute('hidden');
-    settings.setAttribute('hidden', '');
-    setTimeout(() => nameInp.focus(), 200);
   });
 
   // show the modal on first visit; auto-skip if both prefs already set
