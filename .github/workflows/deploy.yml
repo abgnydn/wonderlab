@@ -1,0 +1,44 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel in-flight deploys when a new commit lands on main
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents:    read
+  deployments: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install rsvg-convert (for og.png regeneration)
+        run: sudo apt-get update -y && sudo apt-get install -y --no-install-recommends librsvg2-bin
+
+      - name: Build static deploy
+        run: |
+          # regenerate og.png from og.svg in case it drifted
+          rsvg-convert -w 1200 -h 630 og.svg -o og.png
+          node scripts/build.mjs
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command:   pages deploy public --project-name wonderlab --branch main --commit-dirty=true
