@@ -603,7 +603,8 @@ function closeSettingsModal() {
   if (!modal) return;
   modal.hidden = true;
   document.body.style.overflow = '';
-  refreshConnectHint();   // re-evaluate hint visibility after edits
+  refreshConnectHint();          // re-evaluate hint visibility after edits
+  refreshActiveBackendChip();
 }
 
 function rebuildSettingsContents() {
@@ -667,6 +668,7 @@ function rebuildSettingsContents() {
           s.keys[conn.id] = e.target.value;
           saveSettings(s);
           refreshConnectHint();
+          refreshActiveBackendChip();
         });
       }
       // url field for LM Studio
@@ -709,6 +711,7 @@ function rebuildSettingsContents() {
 
   // hint visibility refresh (in case user changed backend / pasted key)
   refreshConnectHint();
+  refreshActiveBackendChip();
 
   // draw toggle in settings (mirror of the chip in chat input)
   const drawT = $('settings-draw-toggle');
@@ -738,6 +741,44 @@ function escapeAttr(s) {
   return String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]);
 }
 
+// Active-backend chip — shows the visitor which model is currently
+// powering iris. Clicks open settings.
+function refreshActiveBackendChip() {
+  const btn   = $('active-backend');
+  const label = $('active-backend-label');
+  if (!btn || !label) return;
+  const s    = loadSettings();
+  const conn = getActiveConnector(s);
+  // category for the dot color
+  const cls = !conn               ? 'is-empty'
+            : conn.id === 'webllm'      ? 'is-empty'
+            : conn.id === 'lmstudio'    ? 'is-local'
+            : conn.id === 'local-server'? 'is-local'
+            : 'is-cloud';
+  btn.classList.remove('is-empty', 'is-cloud', 'is-local');
+  btn.classList.add(cls);
+  // label: short, fits in <200px chip
+  let text = 'pick a backend';
+  if (conn) {
+    const map = {
+      claude:        'Claude',
+      gemini:        'Gemini',
+      webllm:        'WebLLM (in-browser)',
+      lmstudio:      'LM Studio (local)',
+      'local-server':'local server',
+    };
+    text = `via ${map[conn.id] || conn.id}`;
+    // if a specific model is picked, append the short label
+    const model = (s.models[conn.id] || '').trim();
+    if (model && conn.id === 'webllm') {
+      // Llama-3.2-1B-Instruct-q4f16_1-MLC → 1B
+      const m = /-(\d+(?:\.\d+)?B)-/i.exec(model);
+      if (m) text = `via WebLLM · ${m[1]}`;
+    }
+  }
+  label.textContent = text;
+}
+
 // First-time visitor hint: nudge them toward settings when the active
 // backend needs a key and there isn't one. Stored "dismissed" in
 // localStorage so it doesn't keep coming back after they choose to ignore it.
@@ -758,6 +799,7 @@ function refreshConnectHint() {
 function setupSettings() {
   // open the modal from the gear button (and on body's "open-settings" event)
   $('settings-btn')?.addEventListener('click', () => openSettingsModal());
+  $('active-backend')?.addEventListener('click', () => openSettingsModal());
   document.addEventListener('open-settings', () => openSettingsModal());
 
   // first-time hint above the chat input
@@ -765,6 +807,7 @@ function setupSettings() {
   $('connect-hint-dismiss')?.addEventListener('click', () => {
     try { localStorage.setItem(HINT_DISMISSED_KEY, '1'); } catch {}
     refreshConnectHint();
+    refreshActiveBackendChip();
   });
 
   // close on backdrop / X / escape
@@ -835,8 +878,9 @@ function setupSettings() {
       cur.models[conn.id] = conn.models[0].id;
       saveSettings(cur);
     }
-    // first-time hint
+    // first-time hint + backend chip
     refreshConnectHint();
+    refreshActiveBackendChip();
   });
 }
 

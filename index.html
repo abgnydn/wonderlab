@@ -2008,10 +2008,120 @@
     color: var(--ink-soft);
   }
   .room-footer span { color: var(--rose); }
+
+  /* a11y skip-link — focus-visible only, hidden otherwise */
+  .skip-link {
+    position: fixed;
+    top: -100px;
+    left: 0.9rem;
+    background: var(--ink);
+    color: var(--cream);
+    padding: 0.5rem 0.9rem;
+    border-radius: 8px;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    text-decoration: none;
+    z-index: 200;
+    transition: top 0.2s ease;
+  }
+  .skip-link:focus { top: 0.9rem; }
+
+  /* active-backend chip — sits in panel-toggles next to the gear, shows
+     the visitor which model is currently powering iris. clickable: opens
+     settings. desktop only — hidden on mobile to keep the top bar light. */
+  .active-backend {
+    appearance: none;
+    background: white;
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 0.28rem 0.7rem 0.28rem 0.55rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 0.78rem;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: var(--shadow-sm);
+    transition: transform .12s ease, box-shadow .12s ease, background .15s ease;
+    max-width: 200px;
+  }
+  .active-backend:hover  { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink); background: var(--sun-glow); }
+  .active-backend:active { transform: translate(1px, 1px); box-shadow: 0 0 0 var(--ink); }
+  .active-backend__dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--leaf-deep);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px var(--leaf);
+    animation: livePulse 2.4s ease-in-out infinite;
+  }
+  .active-backend.is-cloud  .active-backend__dot { background: var(--sky-deep); box-shadow: 0 0 0 2px var(--sky); }
+  .active-backend.is-local  .active-backend__dot { background: var(--rose);     box-shadow: 0 0 0 2px var(--peach); }
+  .active-backend.is-empty  .active-backend__dot { background: var(--ink-soft); box-shadow: 0 0 0 2px transparent; animation: none; }
+  .active-backend__label   { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @keyframes livePulse {
+    0%, 100% { box-shadow: 0 0 0 2px var(--leaf); }
+    50%      { box-shadow: 0 0 0 4px rgba(143,200,108,0.35); }
+  }
+  @media (max-width: 699px) {
+    .active-backend { display: none; }
+  }
+
+  /* public footer — bottom-right, tiny, never blocks the canvas */
+  .public-footer {
+    position: fixed;
+    bottom: 0.65rem;
+    right: 0.85rem;
+    z-index: 4;
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    pointer-events: none;
+  }
+  .public-footer__chip {
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.86);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: var(--ink);
+    border: 1.6px solid var(--ink);
+    border-radius: 999px;
+    padding: 0.22rem 0.55rem;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 600;
+    font-size: 0.72rem;
+    line-height: 1.2;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    box-shadow: 1px 1px 0 var(--ink);
+  }
+  a.public-footer__chip:hover { background: var(--sun-glow); transform: translate(-1px,-1px); box-shadow: 2px 2px 0 var(--ink); }
+  .public-footer__chip--privacy { background: rgba(184, 223, 160, 0.85); }
+  .public-footer__chip--meta    { background: rgba(255, 209, 107, 0.85); }
+  /* tighter on mobile — the chat-input owns the bottom row */
+  @media (max-width: 699px) {
+    .public-footer {
+      bottom: 5.6rem;             /* above the chat input */
+      right: 0.6rem;
+      gap: 0.3rem;
+    }
+    .public-footer__chip { font-size: 0.66rem; padding: 0.18rem 0.5rem; }
+  }
 </style>
 </head>
 
 <body>
+
+<!-- a11y: skip link, only visible when keyboard-focused -->
+<a class="skip-link" href="#splat-canvas">skip to the lab</a>
 
 <div class="room">
 
@@ -2026,6 +2136,10 @@
   <div class="panel-toggles" aria-label="open panel">
     <button type="button" id="toggle-chat"  aria-pressed="false">chat</button>
     <button type="button" id="toggle-cork"  aria-pressed="false">questions</button>
+    <button type="button" id="active-backend" class="active-backend" aria-label="active backend — click to change in settings" title="click to change in settings">
+      <span class="active-backend__dot" aria-hidden="true"></span>
+      <span class="active-backend__label" id="active-backend-label">…</span>
+    </button>
     <button type="button" id="settings-btn" aria-label="settings" title="settings">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="3"/>
@@ -2309,6 +2423,20 @@
 
   <!-- chat thread kept in DOM (hidden via CSS) so main.js callsites keep working -->
   <div id="chat-thread" hidden></div>
+
+  <!-- public footer — small, unobtrusive, bottom-right -->
+  <footer class="public-footer" aria-label="about wonderlab">
+    <span class="public-footer__chip public-footer__chip--privacy">
+      <span aria-hidden="true">🛡️</span> no server · keys stay in this browser
+    </span>
+    <a class="public-footer__chip" href="https://github.com/abgnydn/wonderlab" target="_blank" rel="noopener" title="source on github">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+        <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/>
+      </svg>
+      source
+    </a>
+    <span class="public-footer__chip public-footer__chip--meta">v0.1 · alpha</span>
+  </footer>
 
   <!-- ============ SETTINGS MODAL ============ -->
   <div id="settings-modal" class="settings-modal" hidden role="dialog" aria-modal="true" aria-labelledby="settings-title">
