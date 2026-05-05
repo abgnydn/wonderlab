@@ -180,30 +180,39 @@ export class LabScene {
   setZoom() {}
   setAutoAnimate() {}
 
-  /** Rasterise an SVG string onto the whiteboard canvas → texture. */
+  /**
+   * Render an SVG onto the whiteboard with a stroke-by-stroke draw
+   * animation — the marker tip traces each path live, fills + text fade
+   * in just behind the strokes. Falls back to one-shot raster if the
+   * SVG can't be parsed (small/local models sometimes produce invalid
+   * SVG) or if a frame takes too long (slow device → bail to instant).
+   */
   async _renderSvgToBoard(svg) {
     this.clearLoading();
-    const W = this._svgCanvas.width, H = this._svgCanvas.height;
-    const ctx = this._svgCanvas.getContext('2d');
-    // clear to cream so the rasterised SVG has a known background even if
-    // the SVG itself is partially transparent
-    ctx.fillStyle = '#FCEFD2';
-    ctx.fillRect(0, 0, W, H);
 
-    // Defensive SVG sanitisation — make it more likely to parse:
-    //   • ensure xmlns is set
-    //   • prepend XML declaration (some browsers need it)
-    //   • use data: URL instead of blob: (data URLs are more robust for
-    //     SVG-as-image and don't depend on URL.createObjectURL lifetimes)
+    // Defensive SVG sanitisation
     let svgText = svg.trim();
     if (!/xmlns=/.test(svgText)) {
       svgText = svgText.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
     }
-    if (!/<\?xml/.test(svgText)) {
-      svgText = '<?xml version="1.0" encoding="UTF-8"?>' + svgText;
-    }
-    const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText);
 
+    // Try the live-draw path first; fall back to one-shot on any failure.
+    try {
+      await this._renderSvgStrokeByStroke(svgText);
+    } catch (e) {
+      console.info('[wonderlab] live-draw fell back to one-shot:', e?.message || e);
+      await this._renderSvgOneShot(svgText);
+    }
+  }
+
+  // One-shot raster — used when stroke-by-stroke can't run (parse fail,
+  // slow device, etc). Same shape as the original renderer.
+  async _renderSvgOneShot(svgText) {
+    const W = this._svgCanvas.width, H = this._svgCanvas.height;
+    const ctx = this._svgCanvas.getContext('2d');
+    ctx.fillStyle = '#FCEFD2'; ctx.fillRect(0, 0, W, H);
+    if (!/<\?xml/.test(svgText)) svgText = '<?xml version="1.0" encoding="UTF-8"?>' + svgText;
+    const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText);
     try {
       await new Promise((resolve, reject) => {
         const img = new Image();
@@ -216,14 +225,140 @@ export class LabScene {
         img.src = dataUrl;
       });
     } catch (e) {
-      // Fallback: paint a polite "couldn't draw" card without spamming console
       ctx.fillStyle = '#FCEFD2'; ctx.fillRect(0, 0, W, H);
       ctx.font = '700 48px "Caveat", cursive';
       ctx.fillStyle = '#E66363';
       ctx.textAlign = 'center';
       ctx.fillText("(couldn't draw that one — try again?)", W / 2, H / 2);
       this._svgTex.needsUpdate = true;
-      console.warn('[wonderlab] SVG render fell back:', e?.message || e);
+      console.warn('[wonderlab] SVG render fell back hard:', e?.message || e);
+    }
+  }
+
+  // Stroke-by-stroke renderer.
+  //   1. Parse the SVG as DOM, mount it offscreen so getTotalLength() works
+  //   2. Walk every <path|line|polyline|polygon>, set stroke-dasharray =
+  //      pathLength and stroke-dashoffset = pathLength so it starts hidden
+  //   3. Fade-in pass for fills (rect/circle/ellipse/text) just behind the
+  //      strokes — they appear ~0.1s after their region's stroke starts
+  //   4. Each animation frame: serialise the SVG to a data URL, decode it,
+  //      drawImage onto the whiteboard canvas, mark texture dirty
+  //   5. Iris swaps to "pointing" pose during draw, "talking" briefly at
+  //      the end, then back to idle — the arm visibly moves
+  async _renderSvgStrokeByStroke(svgText) {
+    const W = this._svgCanvas.width, H = this._svgCanvas.height;
+    const ctx = this._svgCanvas.getContext('2d');
+
+    // Parse to DOM. If it fails or the root isn't an svg, abort to one-shot.
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgText, 'image/svg+xml');
+    if (doc.querySelector('parsererror')) throw new Error('parsererror');
+    const svgEl = doc.documentElement;
+    if (!svgEl || svgEl.nodeName.toLowerCase() !== 'svg') throw new Error('no <svg> root');
+
+    // Mount offscreen so getTotalLength() works
+    svgEl.setAttribute('width',  String(W));
+    svgEl.setAttribute('height', String(H));
+    svgEl.style.position  = 'fixed';
+    svgEl.style.left      = '-99999px';
+    svgEl.style.top       = '0';
+    svgEl.style.opacity   = '0';
+    svgEl.style.pointerEvents = 'none';
+    document.body.appendChild(svgEl);
+
+    let cleanup = () => { try { svgEl.remove(); } catch {} };
+
+    const strokeables = Array.from(svgEl.querySelectorAll('path, line, polyline, polygon'));
+    const lengths = strokeables.map((el) => {
+      try { return Math.max(20, el.getTotalLength?.() ?? 100); } catch { return 100; }
+    });
+
+    // Hide strokes via dasharray + dashoffset
+    strokeables.forEach((el, i) => {
+      el.style.strokeDasharray  = `${lengths[i]} ${lengths[i] * 1.1}`;
+      el.style.strokeDashoffset = String(lengths[i]);
+    });
+
+    // Fills + text fade in slightly after their region's stroke starts
+    const fillables = Array.from(svgEl.querySelectorAll('rect, circle, ellipse, text, image'));
+    fillables.forEach((el) => {
+      el.dataset.origOpacity = el.getAttribute('opacity') || el.style.opacity || '';
+      el.style.opacity = '0';
+    });
+
+    // Iris picks up the marker (pointing pose) for the duration of the draw
+    const wasMood = this._mood;
+    this._setPose('pointing');
+
+    // Single reusable Image — much faster than allocating per frame
+    const reusable = new Image();
+    let pendingResolve = null;
+    reusable.onload  = () => { pendingResolve?.(); };
+    reusable.onerror = () => { pendingResolve?.(new Error('decode fail')); };
+
+    const DUR = 3000;          // total ~3s, scales fine for ~10-30 strokes
+    const FILL_DELAY = 0.1;
+    const t0 = performance.now();
+    let lastFrameMs = 16;
+    let bailout = false;
+
+    try {
+      await new Promise((resolve, reject) => {
+        const tick = async () => {
+          if (bailout) return resolve();
+          const frameStart = performance.now();
+          const t = Math.min(1, (frameStart - t0) / DUR);
+
+          // strokes — staggered reveal
+          const N = strokeables.length || 1;
+          strokeables.forEach((el, i) => {
+            const stagger = (i / N) * 0.35;        // up to 35% of timeline as stagger
+            const localT  = Math.max(0, Math.min(1, (t - stagger) / Math.max(0.05, 1 - stagger * 0.5)));
+            el.style.strokeDashoffset = String(lengths[i] * (1 - localT));
+          });
+
+          // fills — global fade after FILL_DELAY
+          const fillT = Math.max(0, (t - FILL_DELAY) / (1 - FILL_DELAY));
+          fillables.forEach((el) => {
+            const orig = el.dataset.origOpacity;
+            const target = orig === '' || orig == null ? 1 : Number(orig) || 1;
+            el.style.opacity = String(Math.min(1, fillT * 1.4) * target);
+          });
+
+          // serialise + decode + paint
+          const xml = new XMLSerializer().serializeToString(svgEl);
+          const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+          await new Promise((res, rej) => { pendingResolve = (e) => (e ? rej(e) : res()); reusable.src = dataUrl; });
+
+          ctx.fillStyle = '#FCEFD2'; ctx.fillRect(0, 0, W, H);
+          ctx.drawImage(reusable, 0, 0, W, H);
+          this._svgTex.needsUpdate = true;
+
+          // tiny arm sway: swap between pointing and idle every ~280ms while
+          // drawing, so iris's marker hand visibly moves
+          const phase = Math.floor(((frameStart - t0) / 280) % 2);
+          if (this._irisPoses?.pointing && this._irisPoses?.idle) {
+            this._setPose(phase === 0 ? 'pointing' : 'idle');
+          }
+
+          // Bail to one-shot if a single frame takes >130ms (slow device).
+          // The fallback re-uses the same SVG and will paint instantly.
+          lastFrameMs = performance.now() - frameStart;
+          if (lastFrameMs > 130 && t < 0.5) {
+            bailout = true;
+            return reject(new Error(`slow frame ${Math.round(lastFrameMs)}ms — bailing to one-shot`));
+          }
+
+          if (t < 1) requestAnimationFrame(tick);
+          else resolve();
+        };
+        requestAnimationFrame(tick);
+      });
+    } finally {
+      cleanup();
+      // restore iris's mood + a brief "talking" beat as if she just finished
+      if (this._irisPoses?.idle) this._setPose('idle');
+      this._mood = wasMood || 'idle';
     }
   }
 
