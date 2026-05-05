@@ -15,6 +15,7 @@ import {
 import {
   getStorageInfo, clearCache, clearAllModelStorage, fmtBytes, prettyName,
 } from './storage-info.js';
+import { resolveBenchmark } from './benchmarks.js';
 import {
   renderShareCard,
   downloadCanvasAsPng,
@@ -117,6 +118,26 @@ function paintSpec(spec) {
   if (aha) aha.classList.remove('show');
 
   paintFollowUps(isWelcome ? [] : (spec._follow_ups || []));
+  paintBenchmarkChip(isWelcome ? null : spec._research?.benchmark);
+}
+
+// Benchmark chip — when iris cites a real-world benchmark, render it as
+// a clickable pill anchored under the answer card. One click → the
+// upstream Hugging Science / TDC / OpenProblems page in a new tab.
+// This is the bridge from "kid question" to "real open problem", and
+// the whole reason wonderlab pitches as a translation layer.
+function paintBenchmarkChip(name) {
+  const host = $('benchmark-chip');
+  if (!host) return;
+  const b = resolveBenchmark(name);
+  if (!b) { host.hidden = true; host.innerHTML = ''; return; }
+  host.hidden = false;
+  host.innerHTML = `
+    <span class="benchmark-chip__lede">tied to a real challenge:</span>
+    <a class="benchmark-chip__link" href="${escapeAttr(b.url)}" target="_blank" rel="noopener">
+      ${escapeHTML(b.label)} <span aria-hidden="true">↗</span>
+    </a>
+  `;
 }
 
 // follow-ups strip — small clickable bubbles above the chat input,
@@ -1366,6 +1387,17 @@ if ('serviceWorker' in navigator) {
 async function main() {
   const canvas = $('splat-canvas');
   if (!canvas) return;
+
+  // ?embed=1 → strip the chrome so the lab fits cleanly in an iframe
+  // (Hugging Face Space, blog post, classroom worksheet). The room +
+  // answer card + chat input stay; the wordmark, side panels, footer,
+  // touch dpad and welcome modal are hidden via body.is-embed in CSS.
+  try {
+    const qs = new URLSearchParams(location.search);
+    if (qs.get('embed') === '1' || qs.has('embed') && qs.get('embed') !== '0') {
+      document.body.classList.add('is-embed');
+    }
+  } catch {}
 
   STATUS('warming up…');
   scene = new LabScene(canvas);

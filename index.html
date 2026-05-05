@@ -1200,6 +1200,40 @@
     font-weight: 700;
   }
 
+  /* benchmark chip — Hugging Science breadcrumb under the answer card.
+     One-click bridge from the kid answer to the real open challenge.
+     Sky-blue tint so it visually feels like the "research side" of the
+     translation layer, distinct from the leaf-green follow-ups. */
+  .benchmark-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    padding: 0.05rem 0.1rem;
+  }
+  .benchmark-chip[hidden] { display: none; }
+  .benchmark-chip__lede   { font-style: italic; }
+  .benchmark-chip__link {
+    background: var(--sky);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 0.22rem 0.65rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 0.82rem;
+    text-decoration: none;
+    box-shadow: var(--shadow-sm);
+    transition: transform .12s ease, background .15s ease, box-shadow .12s ease;
+    display: inline-flex; align-items: center; gap: 0.3rem;
+  }
+  .benchmark-chip__link:hover  { background: var(--sky-deep); color: white; transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink); }
+  .benchmark-chip__link:active { transform: translate(1px, 1px); box-shadow: 0 0 0 var(--ink); }
+  .benchmark-chip__link span   { font-size: 0.78em; opacity: 0.85; }
+
   /* connect hint — first-time nudge above the answer card / chat input.
      Only rendered when the active backend needs a key and the user hasn't
      set one. Hidden once dismissed; reappears if the backend is changed
@@ -2342,6 +2376,55 @@
     .controls-hint { display: none; }                          /* keyboard-only copy */
   }
 
+  /* embed mode — ?embed=1 in the URL strips the chrome so wonderlab
+     drops cleanly into an iframe on someone else's page. Keeps the
+     3D room, answer card, chat input, gear, share. Hides side panels
+     + wordmark + footer + welcome modal + touch dpad.
+     A subtle "made with wonderlab ↗" badge replaces the public footer
+     so the embed always points back to the parent app. */
+  body.is-embed .room-sign,
+  body.is-embed #chat-thread,
+  body.is-embed .corkboard,
+  body.is-embed .controls-hint,
+  body.is-embed .public-footer,
+  body.is-embed .welcome-overlay,
+  body.is-embed .touch-dpad,
+  body.is-embed .connect-hint,
+  body.is-embed #toggle-chat,
+  body.is-embed #toggle-cork    { display: none !important; }
+  body.is-embed .lab-stage      { width: 100vw !important; max-width: 100vw !important; }
+  body.is-embed .room-bottom    { width: min(720px, calc(100vw - 1.4rem)); }
+  body.is-embed::after {
+    content: "made with wonderlab ✦";
+    position: fixed;
+    bottom: 0.6rem;
+    left: 0.85rem;
+    z-index: 4;
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--ink);
+    border: 1.6px solid var(--ink);
+    border-radius: 999px;
+    padding: 0.22rem 0.65rem;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.72rem;
+    box-shadow: 1px 1px 0 var(--ink);
+    pointer-events: none;
+  }
+  /* the badge anchor — invisible click target sitting over the ::after
+     pseudo, only mounted in embed mode */
+  .embed-attrib            { display: none; }
+  body.is-embed .embed-attrib {
+    display: block;
+    position: fixed;
+    bottom: 0.6rem;
+    left: 0.85rem;
+    z-index: 5;
+    width: 11rem;
+    height: 1.6rem;
+    text-decoration: none;
+  }
+
   /* a11y skip-link — focus-visible only, hidden otherwise */
   .skip-link {
     position: fixed;
@@ -2778,6 +2861,12 @@
       </button>
     </div>
 
+    <!-- Hugging Science breadcrumb — one-click bridge from this kid
+         question to the real-world benchmark iris named in research.
+         Populated by paintBenchmarkChip(). Hidden when the spec has no
+         benchmark or it resolves to "none". -->
+    <div id="benchmark-chip" class="benchmark-chip" hidden></div>
+
     <form class="chat-input" id="ask-form" autocomplete="off">
       <input id="ask-input" type="text" inputmode="text" autocomplete="off" autocapitalize="sentences" placeholder="ask anything you wonder about…" />
       <button id="mic-btn" type="button" aria-label="ask by voice" title="ask by voice">
@@ -2807,6 +2896,10 @@
 
   <!-- lab-grow toast — slides in when the room sprouts new furniture -->
   <div id="grow-toast" class="grow-toast" hidden role="status" aria-live="polite"></div>
+
+  <!-- embed-mode attribution link, anchors over the ::after badge so the
+       badge is clickable. Only visible when body.is-embed is set. -->
+  <a class="embed-attrib" href="https://the-wonderlab.pages.dev/" target="_blank" rel="noopener" aria-label="open wonderlab"></a>
 
   <!-- public footer — small, unobtrusive, bottom-right -->
   <footer class="public-footer" aria-label="about wonderlab">
