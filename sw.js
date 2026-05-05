@@ -8,25 +8,29 @@
 // Registered from src/main.js.
 // =============================================================
 
-const CACHE_NAME = 'wonderlab-models-v2';
+const CACHE_NAME = 'wonderlab-models-v3';
 
-// hostnames whose responses we want to cache forever.
-// IMPORTANT: do NOT cover all of *.hf.co — WebLLM's model weights are
-// served via cas-bridge.xethub.hf.co and stored under WebLLM's own
-// internal Cache, which conflicts with this SW intercepting those
-// requests (Cache.add() then fails with a network error). We only
-// shadow the Kokoro / transformers.js CDNs, which are specifically:
-const HF_HOSTS = [
-  'huggingface.co',
+// We ONLY shadow Kokoro / transformers.js asset paths. Anything else —
+// especially WebLLM's model shards under huggingface.co/mlc-ai/* — must
+// pass straight through, because:
+//
+//   • WebLLM uses Cache.add(url) on those shards itself.
+//   • huggingface.co serves them as 302 redirects to xethub.hf.co.
+//   • If we intercept, our fetch() follows the redirect, returns a
+//     redirected Response, and WebLLM's Cache.add then rejects with
+//     "encountered a network error" because Cache.add does NOT accept
+//     redirected responses.
+//
+// Path-scoped allowlist instead of host-scoped — only Kokoro repos
+// (huggingface.co/onnx-community/Kokoro*) and HF blob/resolve paths
+// from the same org get our caching layer.
+const KOKORO_PATH_RE = /^\/onnx-community\/Kokoro/i;
+
+// Hosts that ONLY ever serve Kokoro / transformers.js bytes can stay
+// fully shadowed by hostname (their CDN names — kept narrow on purpose).
+const ALWAYS_SHADOW_HOSTS = [
   'cdn-lfs.huggingface.co',
   'cdn-lfs.hf.co',
-];
-
-// hard exclude any subdomain we know belongs to WebLLM's pipeline,
-// even if a future host rule accidentally matches them:
-const SKIP_HOSTS = [
-  'xethub.hf.co',                    // catches *.xethub.hf.co
-  'cas-bridge.xethub.hf.co',
 ];
 
 self.addEventListener('install', (event) => {
@@ -57,15 +61,14 @@ self.addEventListener('fetch', (event) => {
   let url;
   try { url = new URL(req.url); } catch { return; }
 
-  // hard skip — WebLLM owns these
-  if (SKIP_HOSTS.some(h => url.hostname === h || url.hostname.endsWith('.' + h))) {
-    return;
-  }
-
-  // only intercept Kokoro / transformers.js CDN requests
-  if (!HF_HOSTS.some(h => url.hostname === h || url.hostname.endsWith('.' + h))) {
-    return;
-  }
+  // pass-through unless this is unambiguously a Kokoro/transformers asset:
+  //   • CDN-LFS subdomain (always Kokoro/HF model bytes)
+  //   • huggingface.co with a path under /onnx-community/Kokoro*
+  // anything else (WebLLM repos under huggingface.co/mlc-ai/*, the rest
+  // of the open web) escapes this SW completely.
+  const isCdnLfs   = ALWAYS_SHADOW_HOSTS.includes(url.hostname);
+  const isKokoroHf = url.hostname === 'huggingface.co' && KOKORO_PATH_RE.test(url.pathname);
+  if (!isCdnLfs && !isKokoroHf) return;
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
