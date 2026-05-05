@@ -90,6 +90,12 @@ const SCENE_SCHEMA = {
         benchmark:     { type: ['string', 'null'] },
       },
     },
+    follow_ups: {
+      type: 'array',
+      description: '2-3 short kid-voice questions branching from this answer',
+      minItems: 0, maxItems: 3,
+      items: { type: 'string' },
+    },
   },
 };
 
@@ -133,6 +139,12 @@ const SCENE_SCHEMA_NO_IMAGE = {
         open_question: { type: 'string' },
         benchmark:     { type: ['string', 'null'] },
       },
+    },
+    follow_ups: {
+      type: 'array',
+      description: '2-3 short kid-voice questions branching from this answer',
+      minItems: 0, maxItems: 3,
+      items: { type: 'string' },
     },
   },
 };

@@ -50,6 +50,7 @@ function asSceneSpec(reply) {
     _reply:    s.reply,
     _level:    s.level,
     _research: s.research,
+    _follow_ups: Array.isArray(s.follow_ups) ? s.follow_ups : [],
     _meta:     reply.meta,
   };
 }
@@ -76,6 +77,35 @@ function paintSpec(spec) {
 
   const aha = $('scene-aha');
   if (aha) aha.classList.remove('show');
+
+  paintFollowUps(isWelcome ? [] : (spec._follow_ups || []));
+}
+
+// follow-ups strip — small clickable bubbles above the chat input,
+// each one a kid-voice branch question from the current answer.
+function paintFollowUps(list) {
+  const strip = $('follow-ups-strip');
+  if (!strip) return;
+  strip.innerHTML = '';
+  const valid = (list || []).filter(s => typeof s === 'string' && s.trim());
+  if (!valid.length) {
+    strip.hidden = true;
+    return;
+  }
+  const head = document.createElement('span');
+  head.className = 'follow-ups-strip__head';
+  head.textContent = 'next?';
+  strip.appendChild(head);
+  valid.slice(0, 3).forEach((q, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'follow-ups-strip__btn';
+    b.style.setProperty('--rot', `${(i % 2 === 0 ? -0.8 : 1.2)}deg`);
+    b.textContent = q;
+    b.addEventListener('click', () => ask(q));
+    strip.appendChild(b);
+  });
+  strip.hidden = false;
 }
 
 async function loadSpec(spec) {
@@ -289,6 +319,8 @@ async function ask(question) {
   scene.setLoading?.(q);
   // and switch iris to curious — eyes drift to the board, brows up
   scene.setMood?.('curious');
+  // hide stale follow-ups so a slow click on yesterday's chain can't fire
+  paintFollowUps([]);
 
   // Confirm we have a working backend before dispatching. If the active
   // connector needs a key and the key is empty, open settings instead of

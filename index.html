@@ -1149,6 +1149,57 @@
     color: var(--ink);
   }
 
+  /* Follow-ups strip — sticky-note-ish bubbles above the answer card.
+     Each one is a kid-voice branch question pulled from the current
+     SceneSpec's `follow_ups` array. Click → asks it next. The whole
+     strip slides in with a tiny stagger when populated. */
+  .follow-ups-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0.1rem 0.1rem;
+    animation: stripIn 0.35s ease-out;
+  }
+  .follow-ups-strip[hidden] { display: none; }
+  @keyframes stripIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .follow-ups-strip__head {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--ink-soft);
+    margin-right: 0.1rem;
+    transform: rotate(-3deg);
+  }
+  .follow-ups-strip__btn {
+    appearance: none;
+    background: var(--leaf);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 0.86rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transform: rotate(var(--rot, 0deg));
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease;
+    max-width: 100%;
+    text-align: left;
+    line-height: 1.25;
+  }
+  .follow-ups-strip__btn:hover  { background: var(--leaf-deep); transform: rotate(var(--rot, 0deg)) translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+  .follow-ups-strip__btn:active { transform: rotate(var(--rot, 0deg)) translate(1px, 1px); box-shadow: 0 0 0 var(--ink); }
+  .follow-ups-strip__btn::before {
+    content: "→ ";
+    color: var(--rose);
+    font-weight: 700;
+  }
+
   /* connect hint — first-time nudge above the answer card / chat input.
      Only rendered when the active backend needs a key and the user hasn't
      set one. Hidden once dismissed; reappears if the backend is changed
@@ -2530,6 +2581,9 @@
     <!-- one-time hint: appears only when the active backend needs an API key
          and there isn't one set. nudges the visitor toward the gear without
          demanding it. dismissable, but the gate is auto-applied on send. -->
+    <!-- chain bubbles: 2-3 follow-up questions from the last answer -->
+    <div id="follow-ups-strip" class="follow-ups-strip" hidden aria-label="follow-up questions"></div>
+
     <div id="connect-hint" class="connect-hint" hidden>
       <span class="connect-hint__arrow" aria-hidden="true">↗</span>
       <span class="connect-hint__text">
