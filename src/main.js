@@ -435,6 +435,11 @@ async function ask(question) {
     // the lab grows: tag-driven furniture spawning. Runs after the spec
     // has painted so the new piece slides in alongside the answer.
     growLabFor(spec._field);
+    // iris remembers — persist the last real question + kid answer so
+    // the next visit's welcome scene can callback. Skip welcome specs.
+    if (spec.id !== 'welcome' && q) {
+      setLastAnswer(q, spec.answer?.kid || spec._reply || '');
+    }
   } catch (e) {
     const msg = `couldn't reach the lab — ${e.message}`;
     setBubble(msg);
@@ -488,6 +493,19 @@ const PREF_VOICE_ON = 'wonderlab.voiceOn';   // master "iris speaks aloud" toggl
 
 function getName()       { try { return localStorage.getItem(PREF_NAME) || ''; } catch { return ''; } }
 function setName(n)      { try { localStorage.setItem(PREF_NAME, n); } catch {} }
+
+// Iris remembers — persist the last (real, non-welcome) question +
+// kid answer so the welcome screen can callback on the next visit.
+const PREF_LAST_Q   = 'wonderlab.lastQuestion';
+const PREF_LAST_KID = 'wonderlab.lastKid';
+function getLastQuestion() { try { return localStorage.getItem(PREF_LAST_Q) || ''; } catch { return ''; } }
+function getLastKid()      { try { return localStorage.getItem(PREF_LAST_KID) || ''; } catch { return ''; } }
+function setLastAnswer(q, kid) {
+  try {
+    if (q)   localStorage.setItem(PREF_LAST_Q,   q);
+    if (kid) localStorage.setItem(PREF_LAST_KID, kid);
+  } catch {}
+}
 function getStoredVoice(){ try { return localStorage.getItem(PREF_VOICE) || 'af_heart'; } catch { return 'af_heart'; } }
 
 // Off by default — Kokoro stays the picked voice, but iris doesn't auto-speak
@@ -541,9 +559,12 @@ function seedOpening() {
   const thread = $('chat-thread');
   if (!thread) return;
   const name = getName();
-  const greeting = name
-    ? `hi ${name}! ✦ ask me anything you wonder about. grab a sticky, walk around with the arrows, click on stuff.`
-    : `hi — ask me anything you wonder about. grab a sticky off the corkboard, walk around with the arrows, click on stuff.`;
+  const last = getLastQuestion();
+  const greeting = (name && last)
+    ? `welcome back, ${name}! ✦ last time we wondered about "${last}" — keep going, or try something new?`
+    : (name
+        ? `hi ${name}! ✦ ask me anything you wonder about. grab a sticky, walk around with the arrows, click on stuff.`
+        : `hi — ask me anything you wonder about. grab a sticky off the corkboard, walk around with the arrows, click on stuff.`);
   const turn = document.createElement('div');
   turn.className = 'turn';
   turn.innerHTML = `<div class="them-row"><div class="them">${escapeHTML(greeting)}</div></div>`;
@@ -608,8 +629,11 @@ function setupWelcome() {
     if (thread) thread.innerHTML = '';
     seedOpening();
     if (scene && currentSpec?.id === 'welcome') {
-      loadSpec(makeWelcomeSpec(name));
+      loadSpec(makeWelcomeSpec(name, getLastQuestion()));
     }
+    // surface the last question as a one-shot "revisit" follow-up
+    const last = getLastQuestion();
+    if (last) paintFollowUps([last]);
   });
   // pressing Enter in the name input also enters
   nameInp.addEventListener('keydown', (e) => {
@@ -641,6 +665,8 @@ const CLICK_LINES = {
   papers:     "lots of notes here — every one helped me figure something out.",
   whiteboard: "this is where i think out loud. ask me a question and i'll draw what i mean.",
   microscope: "this is for the close-up stuff. ask me about something tiny and we'll look together.",
+  axolotl:    "that's pebble. she's just a baby — never grew up, but kept all her gills. perfect lab kid.",
+  cat:        "that's atlas. she runs the lab, technically. i just fund her snacks.",
 };
 
 function reactToObjectClick(kind) {
@@ -685,6 +711,7 @@ const TOOLTIP_LABELS = {
   whiteboard: 'whiteboard',
   microscope: 'microscope',
   axolotl: 'pebble the axolotl',
+  cat:     'atlas the cat',
   atom: 'atom model',
   dna: 'dna helix',
   beakers: 'beaker rack',
@@ -720,6 +747,38 @@ function reactToHover(kind, p) {
   t.style.left = `${p.x}px`;
   t.style.top  = `${p.y}px`;
   t.style.opacity = '1';
+}
+
+// -----------------------------------------------------------
+// touch d-pad — wires the on-screen directional buttons to the
+// same _keys map LabScene._walk() already reads. Pointer events so
+// stylus / mouse / touch all work; touchAction: none on the buttons
+// stops mobile browsers from scrolling while a button is held.
+// -----------------------------------------------------------
+function setupTouchDpad() {
+  const dpad = $('touch-dpad');
+  if (!dpad || !scene) return;
+  const buttons = dpad.querySelectorAll('.touch-dpad__btn');
+  buttons.forEach((b) => {
+    const dir = b.dataset.dir;
+    const press = (e) => {
+      e.preventDefault();
+      b.classList.add('is-active');
+      if (dir === 'jump') scene.triggerJump?.();
+      else                scene.setMoveKey?.(dir, true);
+      b.setPointerCapture?.(e.pointerId);
+    };
+    const release = (e) => {
+      b.classList.remove('is-active');
+      if (dir !== 'jump') scene.setMoveKey?.(dir, false);
+    };
+    b.addEventListener('pointerdown',   press);
+    b.addEventListener('pointerup',     release);
+    b.addEventListener('pointercancel', release);
+    b.addEventListener('pointerleave',  release);
+    // contextmenu can pop on long-press; suppress it so movement is smooth
+    b.addEventListener('contextmenu', (e) => e.preventDefault());
+  });
 }
 
 // -----------------------------------------------------------
@@ -1181,13 +1240,15 @@ function setupSettings() {
 // -----------------------------------------------------------
 function setupShare() {
   const btn      = $('share-btn');
+  const topBtn   = $('share-top-btn');
   const modal    = $('share-modal');
   const host     = $('share-preview-host');
   const status   = $('share-status');
   const dlBtn    = $('share-download');
   const cpBtn    = $('share-copy');
   const shBtn    = $('share-native');
-  if (!btn || !modal || !host) return;
+  const linkBtn  = $('share-copylink');
+  if (!modal || !host) return;
 
   let cardCanvas = null;     // last rendered share card
   let rendering  = false;
@@ -1214,14 +1275,10 @@ function setupShare() {
     if (!modal.hidden && e.key === 'Escape') closeModal();
   });
 
-  btn.addEventListener('click', async () => {
+  const openShare = async () => {
     if (rendering) return;
-    if (!currentSpec || currentSpec.id === 'welcome') {
-      // nothing meaningful yet — gentle no-op
-      return;
-    }
     rendering = true;
-    setStatus('developing the photo…');
+    setStatus('');
     host.innerHTML = '';
     modal.hidden = false;
     document.body.style.overflow = 'hidden';
@@ -1229,14 +1286,35 @@ function setupShare() {
     try {
       const wb = scene?._svgCanvas;
       if (!wb) throw new Error('whiteboard not ready');
-      cardCanvas = await renderShareCard(currentSpec, wb);
+      const isWelcome = !currentSpec || currentSpec.id === 'welcome';
+      if (isWelcome) {
+        setStatus("share the live link or take a snap of the welcome whiteboard.", 'ok');
+      } else {
+        setStatus('developing the photo…');
+      }
+      // Even on welcome we render a card — it's just the welcome SVG with
+      // generic copy. The "copy link" action is the more useful path here.
+      cardCanvas = await renderShareCard(currentSpec || { id: 'welcome', question: 'wonderlab', answer: { kid: '' } }, wb);
       host.appendChild(cardCanvas);
-      setStatus('');
+      if (!isWelcome) setStatus('');
     } catch (e) {
       console.error('[share] render failed:', e);
       setStatus(`couldn't develop the photo — ${e.message || e}`, 'error');
     } finally {
       rendering = false;
+    }
+  };
+
+  btn?.addEventListener('click', openShare);
+  topBtn?.addEventListener('click', openShare);
+
+  // copy link — the simplest share path, no rendering required
+  linkBtn?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard?.writeText?.(location.href);
+      setStatus('link copied — paste anywhere.', 'ok');
+    } catch (e) {
+      setStatus(`copy failed — ${e?.message || e}`, 'error');
     }
   });
 
@@ -1305,6 +1383,7 @@ async function main() {
   seedOpening();
   setupSettings();
   setupShare();
+  setupTouchDpad();
 
   // Audio context can't start until the user interacts with the page.
   // First click/keypress anywhere wakes it up + starts the ambient hum.
@@ -1436,6 +1515,10 @@ async function main() {
 
   // open with the cheese demo so the room isn't empty before anyone asks
   await loadSpec(cheeseSpec);
+  // returning visitors get their last question as a clickable pill above
+  // the chat input — one-tap revisit, "or just type something fresh"
+  const last = getLastQuestion();
+  if (last) paintFollowUps([last]);
 }
 
 main();

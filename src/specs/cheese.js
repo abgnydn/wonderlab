@@ -3,9 +3,14 @@
 // Now parametric on the visitor's name (from localStorage).
 // =============================================================
 
-export function makeWelcomeSpec(name = '') {
-  const greeting = name ? `hi ${escapeXml(name)}! ✦` : 'welcome ✦';
-  const subtitle = name ? "what should we wonder about today?" : "what do you wonder about?";
+export function makeWelcomeSpec(name = '', lastQuestion = '') {
+  const isReturning = !!(name && lastQuestion);
+  const greeting = isReturning
+    ? `welcome back, ${escapeXml(name)} ✦`
+    : (name ? `hi ${escapeXml(name)}! ✦` : 'welcome ✦');
+  const subtitle = isReturning
+    ? "want to chase the last thing — or wonder about something new?"
+    : (name ? "what should we wonder about today?" : "what do you wonder about?");
 
   return {
     id: 'welcome',
@@ -114,16 +119,35 @@ export function makeWelcomeSpec(name = '') {
       <text x="400" y="465"
             font-family="Caveat,cursive" font-size="22"
             fill="#8B6240" text-anchor="middle">type below · grab a sticky · click around · jump with space</text>
+
+      ${isReturning ? renderMemorySticky(lastQuestion) : ''}
     </svg>`,
   };
 }
 
-// Backwards-compat — older code imports cheeseSpec.
-// Resolved on import time using the persisted name (if any).
-function readName() {
-  try { return localStorage.getItem('wonderlab.name') || ''; } catch { return ''; }
+// Sticky note in the lower-left that says "last time we wondered about X".
+// Tilted -3°, sun-yellow, taped on. Truncates the question to ~60 chars
+// so the SVG doesn't blow out.
+function renderMemorySticky(question) {
+  const trim = String(question).length > 60
+    ? String(question).slice(0, 57) + '…'
+    : String(question);
+  return `
+    <g transform="translate(70 360) rotate(-3)">
+      <rect width="280" height="100" fill="rgba(45,38,34,0.18)"/>
+      <rect width="280" height="100" fill="#FFE4A8" stroke="#2D2622" stroke-width="2.5"/>
+      <rect x="100" y="-12" width="80" height="22" fill="rgba(124,183,208,0.65)"/>
+      <text x="20" y="34" font-family="Caveat,cursive" font-weight="700" font-size="24" fill="#2D2622">last time we wondered:</text>
+      <text x="20" y="68" font-family="Fredoka,sans-serif" font-weight="600" font-size="18" fill="#5C4A3F">"${escapeXml(trim)}"</text>
+    </g>
+  `;
 }
-export const cheeseSpec = makeWelcomeSpec(readName());
+
+// Backwards-compat — older code imports cheeseSpec.
+// Resolved on import time using the persisted name + lastQuestion (if any).
+function readName()         { try { return localStorage.getItem('wonderlab.name') || ''; } catch { return ''; } }
+function readLastQuestion() { try { return localStorage.getItem('wonderlab.lastQuestion') || ''; } catch { return ''; } }
+export const cheeseSpec = makeWelcomeSpec(readName(), readLastQuestion());
 
 function escapeXml(s) {
   return String(s)

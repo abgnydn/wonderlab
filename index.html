@@ -1298,6 +1298,24 @@
   .share-btn svg    { display: block; }
 
   /* share modal */
+  /* share button in the top bar — same shape as the gear, sun-yellow
+     tint so visitors notice they can share before they've asked anything */
+  .top-share-btn {
+    appearance: none;
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    width: 32px; height: 32px;
+    background: var(--sun);
+    color: var(--ink);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm);
+    transition: transform .12s ease, background .15s ease, box-shadow .12s ease;
+    padding: 0;
+  }
+  .top-share-btn:hover  { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink); background: var(--sun-deep); }
+  .top-share-btn:active { transform: translate(1px, 1px); box-shadow: 0 0 0 var(--ink); }
+
   /* gear button — tucked next to chat/questions toggles in the top bar */
   #settings-btn {
     appearance: none;
@@ -2260,6 +2278,67 @@
   }
   .room-footer span { color: var(--rose); }
 
+  /* touch d-pad — bottom-left, only visible on touch-primary devices.
+     5-button cross: ▲ jump-or-perpendicular handled separately, the 4
+     directionals drive scene.setMoveKey on touchstart/touchend. */
+  .touch-dpad {
+    display: none;       /* shown only via the touch query below */
+    position: fixed;
+    bottom: 5.6rem;
+    left: 0.7rem;
+    z-index: 6;
+    grid-template-areas:
+      ". up    ."
+      "left jump right"
+      ". down  .";
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows:    repeat(3, 48px);
+    gap: 4px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    pointer-events: auto;
+  }
+  .touch-dpad__btn {
+    appearance: none;
+    background: rgba(252, 239, 210, 0.92);
+    color: var(--ink);
+    border: 2.4px solid var(--ink);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    font-size: 1.3rem;
+    line-height: 1;
+    font-weight: 700;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+    touch-action: none;       /* prevent scroll while held */
+  }
+  .touch-dpad__btn:active,
+  .touch-dpad__btn.is-active { background: var(--sun); transform: scale(0.94); }
+  .touch-dpad__up    { grid-area: up; }
+  .touch-dpad__left  { grid-area: left; }
+  .touch-dpad__right { grid-area: right; }
+  .touch-dpad__down  { grid-area: down; }
+  .touch-dpad__jump  {
+    grid-area: jump;
+    background: var(--leaf);
+    border-radius: 50%;
+    font-size: 0.7rem;
+  }
+  .touch-dpad__jump:active,
+  .touch-dpad__jump.is-active { background: var(--leaf-deep); }
+
+  /* show the d-pad only where touch is the primary input */
+  @media (hover: none) and (pointer: coarse) {
+    .touch-dpad { display: grid; }
+    /* and bump tap-target sizes on the chat-input row */
+    #mic-btn, #share-top-btn, #settings-btn { width: 44px; height: 44px; }
+    #ask-submit { padding: 0.55rem 1rem; font-size: 1rem; }
+    #ask-input  { padding: 0.7rem 0.9rem; font-size: 16px; }   /* 16px = no iOS zoom */
+    .controls-hint { display: none; }                          /* keyboard-only copy */
+  }
+
   /* a11y skip-link — focus-visible only, hidden otherwise */
   .skip-link {
     position: fixed;
@@ -2419,6 +2498,12 @@
     <button type="button" id="active-backend" class="active-backend" aria-label="active backend — click to change in settings" title="click to change in settings">
       <span class="active-backend__dot" aria-hidden="true"></span>
       <span class="active-backend__label" id="active-backend-label">…</span>
+    </button>
+    <button type="button" id="share-top-btn" class="top-share-btn" aria-label="share this lab" title="take a photo / share">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 7h3l2-2.5h6L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
     </button>
     <button type="button" id="settings-btn" aria-label="settings" title="settings">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -2707,6 +2792,16 @@
   <!-- chat thread kept in DOM (hidden via CSS) so main.js callsites keep working -->
   <div id="chat-thread" hidden></div>
 
+  <!-- touch d-pad — mobile-only walk + jump. drag to look already works
+       through OrbitControls's touch handler. -->
+  <div id="touch-dpad" class="touch-dpad" aria-hidden="true">
+    <button type="button" class="touch-dpad__btn touch-dpad__up"    data-dir="forward" aria-label="walk forward">▲</button>
+    <button type="button" class="touch-dpad__btn touch-dpad__left"  data-dir="left"    aria-label="strafe left">◀</button>
+    <button type="button" class="touch-dpad__btn touch-dpad__jump"  data-dir="jump"    aria-label="jump">●</button>
+    <button type="button" class="touch-dpad__btn touch-dpad__right" data-dir="right"   aria-label="strafe right">▶</button>
+    <button type="button" class="touch-dpad__btn touch-dpad__down"  data-dir="back"    aria-label="walk back">▼</button>
+  </div>
+
   <!-- lab-grow toast — slides in when the room sprouts new furniture -->
   <div id="grow-toast" class="grow-toast" hidden role="status" aria-live="polite"></div>
 
@@ -2815,11 +2910,14 @@
       <div class="share-modal__preview" id="share-preview-host"></div>
       <div class="share-modal__status" id="share-status"></div>
       <div class="share-modal__actions">
+        <button type="button" id="share-copylink" class="share-action">
+          <span class="share-action__ico">🔗</span> copy link
+        </button>
         <button type="button" id="share-download" class="share-action">
-          <span class="share-action__ico">⬇</span> download
+          <span class="share-action__ico">⬇</span> download png
         </button>
         <button type="button" id="share-copy" class="share-action">
-          <span class="share-action__ico">⧉</span> copy
+          <span class="share-action__ico">⧉</span> copy image
         </button>
         <button type="button" id="share-native" class="share-action share-action--primary">
           <span class="share-action__ico">↗</span> share

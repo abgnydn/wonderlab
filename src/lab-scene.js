@@ -1711,6 +1711,96 @@ export class LabScene {
       this._axolotl = { group: grp, fish: axMesh, ping: 0, baseY: 0.13 };
     }
 
+    // === ATLAS the lab cat — wanders the desk, occasionally naps ===
+    // Black with white socks + a white chest. SVG billboard, picks
+    // a new "perch" on the desk every 12-25 seconds and ambles
+    // toward it. Click → meow + stretch.
+    {
+      const W = 220, H = 160;
+      const c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.minFilter  = THREE.LinearFilter;
+      tex.magFilter  = THREE.LinearFilter;
+      const mat = new THREE.MeshBasicMaterial({
+        map: tex, transparent: true, alphaTest: 0.04,
+        side: THREE.DoubleSide, depthWrite: false,
+      });
+      // ~35cm wide × 25cm tall — a small cat
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.26), mat);
+      plane.userData.kind = 'cat';
+      // sits ON the desk surface (y=1.04), plane half-height up
+      const startY = 1.04 + 0.13;
+      plane.position.set(-0.4, startY, 1.7);
+      this.world.add(plane);
+
+      const catSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 160">
+        <!-- tail: long, curving up behind -->
+        <path d="M 175 95 Q 200 70 195 35 Q 188 18 180 22"
+              fill="none" stroke="#2D2622" stroke-width="14" stroke-linecap="round"/>
+        <path d="M 175 95 Q 200 70 195 35 Q 188 18 180 22"
+              fill="none" stroke="#3A3530" stroke-width="9" stroke-linecap="round"/>
+        <!-- body: chunky oval, sitting / loafing -->
+        <ellipse cx="110" cy="100" rx="62" ry="32" fill="#2D2622" stroke="#1A1614" stroke-width="2"/>
+        <!-- white chest patch -->
+        <ellipse cx="80" cy="108" rx="14" ry="10" fill="#FFFCEC"/>
+        <!-- 4 stubby legs (white socks) -->
+        <ellipse cx="68"  cy="128" rx="10" ry="6" fill="#FFFCEC" stroke="#2D2622" stroke-width="2"/>
+        <ellipse cx="92"  cy="130" rx="10" ry="6" fill="#FFFCEC" stroke="#2D2622" stroke-width="2"/>
+        <ellipse cx="128" cy="130" rx="10" ry="6" fill="#FFFCEC" stroke="#2D2622" stroke-width="2"/>
+        <ellipse cx="152" cy="128" rx="10" ry="6" fill="#FFFCEC" stroke="#2D2622" stroke-width="2"/>
+        <!-- head: round, slightly forward of body -->
+        <ellipse cx="58" cy="76" rx="30" ry="26" fill="#2D2622" stroke="#1A1614" stroke-width="2"/>
+        <!-- ears: triangles -->
+        <path d="M 38 58 L 32 32 L 52 50 Z" fill="#2D2622" stroke="#1A1614" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M 80 56 L 88 32 L 68 48 Z" fill="#2D2622" stroke="#1A1614" stroke-width="2" stroke-linejoin="round"/>
+        <!-- inner-ear pink -->
+        <path d="M 41 53 L 38 40 L 47 48 Z" fill="#FF9B94"/>
+        <path d="M 78 50 L 82 38 L 73 46 Z" fill="#FF9B94"/>
+        <!-- eyes (yellow-green, two slit pupils) -->
+        <ellipse cx="48" cy="74" rx="6.5" ry="5" fill="#D7E36B"/>
+        <ellipse cx="68" cy="74" rx="6.5" ry="5" fill="#D7E36B"/>
+        <ellipse cx="48" cy="74" rx="1.6" ry="4" fill="#1A1614"/>
+        <ellipse cx="68" cy="74" rx="1.6" ry="4" fill="#1A1614"/>
+        <circle  cx="50" cy="72" r="1.2" fill="#FFFFFF"/>
+        <circle  cx="70" cy="72" r="1.2" fill="#FFFFFF"/>
+        <!-- nose + mouth -->
+        <path d="M 56 84 L 60 84 L 58 87 Z" fill="#FF9B94" stroke="#2D2622" stroke-width="1"/>
+        <path d="M 58 87 Q 54 92 50 90 M 58 87 Q 62 92 66 90"
+              fill="none" stroke="#1A1614" stroke-width="1.5" stroke-linecap="round"/>
+        <!-- whiskers -->
+        <path d="M 32 80 L 12 78 M 32 84 L 12 86" stroke="#FFFCEC" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M 84 80 L 104 78 M 84 84 L 104 86" stroke="#FFFCEC" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>`;
+      const _img = new Image();
+      _img.onload = () => {
+        const cx = c.getContext('2d');
+        cx.clearRect(0, 0, W, H);
+        cx.drawImage(_img, 0, 0, W, H);
+        tex.needsUpdate = true;
+      };
+      _img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(catSvg);
+
+      // perches Atlas can move to (all on the desk surface)
+      const perches = [
+        { x:  0.40, z: 1.55 },   // mug-side
+        { x: -0.40, z: 1.70 },   // microscope-side
+        { x:  1.40, z: 1.80 },   // mug area
+        { x: -1.20, z: 1.60 },   // far left
+        { x:  2.30, z: 1.60 },   // far right
+        { x:  0.00, z: 2.00 },   // back-edge centre
+      ];
+      this._cat = {
+        plane,
+        baseY: startY,
+        ping: 0,
+        perches,
+        target: { ...perches[2] },
+        nextHopAt: performance.now() / 1000 + 8 + Math.random() * 8,
+      };
+    }
+
     // === BOOKSHELF against the LEFT wall — colorful book spines ===
     {
       const grp = new THREE.Group();
@@ -2130,6 +2220,22 @@ export class LabScene {
   }
 
   // ---------- keyboard movement (WASD / arrows + space to jump) ----------
+  /** Public hook for the touch d-pad. dir ∈ {'forward','back','left','right'}. */
+  setMoveKey(dir, on) {
+    if (!this._keys) this._keys = {};
+    const map = { forward: 'arrowup', back: 'arrowdown', left: 'arrowleft', right: 'arrowright' };
+    const k = map[dir];
+    if (!k) return;
+    this._keys[k] = !!on;
+  }
+
+  /** Public hook for the touch jump button. */
+  triggerJump() {
+    if ((this._jumpY ?? 0) <= 0.001) {
+      this._jumpVel = 6;
+    }
+  }
+
   _setupKeyboard() {
     this._jumpVel = 0;
     this._jumpY   = 0;     // current vertical offset above eye-height baseline
@@ -2295,6 +2401,7 @@ export class LabScene {
     if (this._beakerCart) objs.push(this._beakerCart);
     if (this._bookshelf)  objs.push(this._bookshelf);
     if (this._axolotl)    objs.push(this._axolotl.group);
+    if (this._cat)        objs.push(this._cat.plane);
     return objs;
   }
 
@@ -2338,6 +2445,7 @@ export class LabScene {
     if (kind === 'atom' && this._atom) this._atom.boost = 2.5;
     if (kind === 'dna' && this._dna)   this._dna.ping = performance.now() / 1000;
     if (kind === 'axolotl' && this._axolotl) this._axolotl.ping = performance.now() / 1000;
+    if (kind === 'cat' && this._cat) this._cat.ping = performance.now() / 1000;
     if (kind === 'beakers' && this._beakerBubbles) {
       for (const b of this._beakerBubbles) b.surge = 1.0;
     }
@@ -2578,6 +2686,31 @@ export class LabScene {
         // pivot at ceiling mount (top); rotate string + bob together
         p.group.rotation.z = angle;
       }
+    }
+
+    // === Atlas — wanders the desk between perches, breathing animation,
+    //     stretches when clicked ===
+    if (this._cat) {
+      const cat = this._cat;
+      // pick a new target perch occasionally
+      if (t > cat.nextHopAt) {
+        const next = cat.perches[(Math.random() * cat.perches.length) | 0];
+        cat.target = { ...next };
+        cat.nextHopAt = t + 12 + Math.random() * 13;       // 12-25s between perches
+      }
+      // drift toward target on x/z, very slowly
+      const p = cat.plane.position;
+      p.x += (cat.target.x - p.x) * 0.012;
+      p.z += (cat.target.z - p.z) * 0.012;
+      // gentle breathing + stretch on click
+      const stretchDt = t - cat.ping;
+      const stretch = stretchDt < 0.9 ? Math.sin(stretchDt * 7) * 0.06 * (1 - stretchDt / 0.9) : 0;
+      cat.plane.position.y = cat.baseY + Math.sin(t * 0.7) * 0.004 + Math.abs(stretch);
+      cat.plane.scale.x = 1 + stretch * 0.6;       // body lengthens during stretch
+      cat.plane.scale.y = 1 - stretch * 0.3;
+      // tiny tail-flick rotation while moving
+      const moving = Math.hypot(p.x - cat.target.x, p.z - cat.target.z) > 0.05;
+      cat.plane.rotation.z = moving ? Math.sin(t * 6) * 0.04 : 0;
     }
 
     // === axolotl — float gently up/down; click adds a tiny wiggle ===
