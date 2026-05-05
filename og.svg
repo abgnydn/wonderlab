@@ -1,74 +1,106 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="system-ui, -apple-system, sans-serif">
   <defs>
     <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%"   stop-color="#FCEFD2"/>
+      <stop offset="0%"   stop-color="#FFF8E8"/>
+      <stop offset="55%"  stop-color="#FCEFD2"/>
       <stop offset="100%" stop-color="#F4E8C9"/>
     </linearGradient>
-    <radialGradient id="vignette" cx="50%" cy="50%" r="65%">
-      <stop offset="0%"  stop-color="rgba(0,0,0,0)"/>
-      <stop offset="100%" stop-color="rgba(45,38,34,0.18)"/>
+    <radialGradient id="lamp" cx="50%" cy="0%" r="70%">
+      <stop offset="0%"   stop-color="rgba(255,233,168,0.55)"/>
+      <stop offset="100%" stop-color="rgba(255,233,168,0)"/>
     </radialGradient>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="75%">
+      <stop offset="60%"  stop-color="rgba(0,0,0,0)"/>
+      <stop offset="100%" stop-color="rgba(45,38,34,0.16)"/>
+    </radialGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2D2622"/>
+    </marker>
   </defs>
 
-  <!-- paper -->
+  <!-- ===== Background: cream paper, lamp glow at the top, vignette ===== -->
   <rect width="1200" height="630" fill="url(#paper)"/>
+  <rect width="1200" height="280" fill="url(#lamp)"/>
   <rect width="1200" height="630" fill="url(#vignette)"/>
 
-  <!-- wordmark + spark -->
-  <g transform="translate(70 80)">
+  <!-- ===== Wordmark, top-left ===== -->
+  <g transform="translate(70 56)">
     <text x="0" y="0" font-family="Caveat, 'Brush Script MT', cursive" font-weight="700" font-size="72" fill="#2D2622" dominant-baseline="hanging">wonder<tspan fill="#E66363">lab</tspan></text>
-    <g transform="translate(280 32)">
+    <g transform="translate(323 32)">
       <path d="M0 -22 L5 -5 L22 0 L5 5 L0 22 L-5 5 L-22 0 L-5 -5 Z"
             fill="#FFD16B" stroke="#2D2622" stroke-width="2.5" stroke-linejoin="round"/>
     </g>
   </g>
 
-  <!-- tagline -->
-  <text x="1130" y="100" text-anchor="end" font-weight="600" font-size="22" fill="#5C4A3F" dominant-baseline="hanging">
-    asked by a kid · drawn by a researcher
-  </text>
-
-  <!-- big handwritten headline -->
-  <text x="70" y="220" font-family="Caveat, 'Brush Script MT', cursive" font-weight="700" font-size="86" fill="#2D2622" dominant-baseline="hanging">
-    "why does cheese melt?"
-  </text>
-
-  <!-- whiteboard frame mockup with a tiny illustration -->
-  <g transform="translate(70 320)">
-    <rect width="640" height="240" rx="14" fill="#b98e62"/>
-    <rect x="14" y="14" width="612" height="212" fill="#FFFCEC"/>
-    <!-- a wedge -->
-    <g transform="translate(180 70)">
-      <polygon points="0,140 240,140 130,0" fill="#FFD16B" stroke="#2D2622" stroke-width="4" stroke-linejoin="round"/>
-      <circle cx="80"  cy="100" r="12" fill="#E66363" stroke="#2D2622" stroke-width="2.5"/>
-      <circle cx="150" cy="80"  r="9"  fill="#7CB7D0" stroke="#2D2622" stroke-width="2.5"/>
-      <circle cx="170" cy="120" r="10" fill="#6FB05C" stroke="#2D2622" stroke-width="2.5"/>
-    </g>
-    <!-- small label -->
-    <text x="320" y="200" font-family="Caveat, cursive" font-weight="700" font-size="28" fill="#2D2622" text-anchor="middle">soft, warm, stretchy</text>
-    <!-- screws -->
-    <circle cx="20"  cy="20"  r="4" fill="#7E5635"/>
-    <circle cx="620" cy="20"  r="4" fill="#7E5635"/>
-    <circle cx="20"  cy="220" r="4" fill="#7E5635"/>
-    <circle cx="620" cy="220" r="4" fill="#7E5635"/>
+  <!-- ===== Tagline, top-right ===== -->
+  <g transform="translate(1130 70)">
+    <text x="0" y="0" text-anchor="end" font-family="Caveat, cursive" font-weight="700" font-size="30" fill="#2D2622" dominant-baseline="hanging">a 3D lab.</text>
+    <text x="0" y="36" text-anchor="end" font-weight="600" font-size="18" fill="#5C4A3F" dominant-baseline="hanging">ask anything · iris draws it · ties it to a real benchmark</text>
   </g>
 
-  <!-- sticky note: how researchers say it -->
-  <g transform="translate(760 320) rotate(-1)">
-    <rect width="370" height="240" rx="6" fill="#FFE4A8" stroke="rgba(45,38,34,0.10)" stroke-width="2"/>
-    <rect x="115" y="-12" width="140" height="24" fill="rgba(124,183,208,0.55)"/>
-    <text x="22" y="36" font-family="Caveat, cursive" font-weight="700" font-size="34" fill="#2D2622" dominant-baseline="hanging">how researchers say it →</text>
-    <text x="22" y="100" font-weight="500" font-size="22" fill="#5C4A3F" dominant-baseline="hanging">
-      <tspan x="22" dy="0">molecular dynamics of</tspan>
-      <tspan x="22" dy="32">protein-fat interactions</tspan>
-      <tspan x="22" dy="32">across temperature gradients</tspan>
-    </text>
-    <text x="22" y="208" font-weight="700" font-size="20" fill="#E66363" dominant-baseline="hanging">— Hugging Science / TDC</text>
+  <!-- ===== Big handwritten kid question ===== -->
+  <text x="600" y="190" font-family="Caveat, cursive" font-weight="700" font-size="78" fill="#2D2622" text-anchor="middle">"why does cheese melt?"</text>
+  <!-- gentle marker underline -->
+  <path d="M 280 235 Q 600 248 920 235" fill="none" stroke="#FFD16B" stroke-width="9" stroke-linecap="round" opacity="0.55"/>
+
+  <!-- ===== Side-by-side illustration: COLD → HEAT → WARM ===== -->
+  <!-- cold cheese (structured dots) -->
+  <g transform="translate(140 320)">
+    <polygon points="0,90 220,90 110,-50"
+             fill="#FFD16B" stroke="#2D2622" stroke-width="4" stroke-linejoin="round"/>
+    <!-- structured dots, packed close — "pieces hold tight" -->
+    <circle cx="60"  cy="55" r="11" fill="#E66363" stroke="#2D2622" stroke-width="2.5"/>
+    <circle cx="110" cy="38" r="9"  fill="#7CB7D0" stroke="#2D2622" stroke-width="2.5"/>
+    <circle cx="160" cy="55" r="11" fill="#6FB05C" stroke="#2D2622" stroke-width="2.5"/>
+    <circle cx="85"  cy="75" r="8"  fill="#FF9B94" stroke="#2D2622" stroke-width="2.5"/>
+    <circle cx="135" cy="75" r="8"  fill="#FFB7A8" stroke="#2D2622" stroke-width="2.5"/>
+    <text x="110" y="138" font-family="Caveat, cursive" font-weight="700" font-size="28" fill="#2D2622" text-anchor="middle">cold — pieces hold tight</text>
   </g>
 
-  <!-- footer url + credit -->
-  <text x="70" y="580" font-weight="700" font-size="22" fill="#2D2622">the-wonderlab.pages.dev</text>
-  <text x="70" y="608" font-weight="500" font-size="18" fill="#5C4A3F">open scientific questions, in plain words</text>
-  <text x="1130" y="580" text-anchor="end" font-weight="700" font-size="20" fill="#2D2622">by Ahmet Barış Günaydın</text>
-  <text x="1130" y="606" text-anchor="end" font-weight="500" font-size="18" fill="#5C4A3F">barisgunaydin.com</text>
+  <!-- arrow heat ↑ -->
+  <g transform="translate(420 380)">
+    <text x="60" y="-22" font-family="Caveat, cursive" font-weight="700" font-size="38" fill="#E66363" text-anchor="middle" transform="rotate(-3 60 -22)">heat ↑</text>
+    <line x1="0" y1="0" x2="115" y2="0" stroke="#2D2622" stroke-width="5" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- warm cheese (spread blob) -->
+  <g transform="translate(580 320)">
+    <path d="M 0 60 Q -25 100 15 110 Q 80 116 135 100 Q 200 110 240 95 Q 280 80 240 50 Q 200 22 130 30 Q 55 25 15 45 Z"
+          fill="#FFD16B" stroke="#2D2622" stroke-width="4" stroke-linejoin="round"/>
+    <!-- spread dots — "pieces slip past" -->
+    <circle cx="40"  cy="78" r="11" fill="#E66363" stroke="#2D2622" stroke-width="2.5"/>
+    <circle cx="95"  cy="58" r="9"  fill="#7CB7D0" stroke="#2D2622" stroke-width="2.5"/>
+    <circle cx="155" cy="80" r="11" fill="#6FB05C" stroke="#2D2622" stroke-width="2.5"/>
+    <circle cx="200" cy="60" r="8"  fill="#FF9B94" stroke="#2D2622" stroke-width="2.5"/>
+    <circle cx="225" cy="85" r="8"  fill="#FFB7A8" stroke="#2D2622" stroke-width="2.5"/>
+    <text x="120" y="138" font-family="Caveat, cursive" font-weight="700" font-size="28" fill="#2D2622" text-anchor="middle">warm — pieces slip past</text>
+  </g>
+
+  <!-- ===== Sticky note: the translation reveal ===== -->
+  <g transform="translate(880 320) rotate(-2)">
+    <!-- soft drop shadow -->
+    <rect x="6" y="8" width="270" height="160" rx="3" fill="rgba(45,38,34,0.18)"/>
+    <!-- sticky body -->
+    <rect width="270" height="160" rx="3" fill="#FFE4A8"/>
+    <!-- tape strip -->
+    <rect x="85" y="-10" width="100" height="22" fill="rgba(124,183,208,0.6)"/>
+    <!-- title -->
+    <text x="22" y="22" font-family="Caveat, cursive" font-weight="700" font-size="32" fill="#2D2622" dominant-baseline="hanging">how researchers</text>
+    <text x="22" y="58" font-family="Caveat, cursive" font-weight="700" font-size="32" fill="#2D2622" dominant-baseline="hanging">say it →</text>
+    <!-- body -->
+    <text x="22" y="98" font-family="Nunito, system-ui" font-weight="600" font-size="18" fill="#5C4A3F" dominant-baseline="hanging">protein-fat thermal</text>
+    <text x="22" y="120" font-family="Nunito, system-ui" font-weight="600" font-size="18" fill="#5C4A3F" dominant-baseline="hanging">disordering</text>
+    <!-- benchmark stamp -->
+    <text x="22" y="146" font-family="Nunito, system-ui" font-weight="700" font-size="14" fill="#E66363" dominant-baseline="hanging">— Hugging Science</text>
+  </g>
+
+  <!-- ===== Footer ===== -->
+  <g transform="translate(0 565)">
+    <!-- left: url + tagline -->
+    <text x="70"  y="0"  font-family="Nunito, system-ui" font-weight="700" font-size="22" fill="#2D2622" dominant-baseline="hanging">the-wonderlab.pages.dev</text>
+    <text x="70"  y="30" font-family="Nunito, system-ui" font-weight="500" font-size="16" fill="#5C4A3F" dominant-baseline="hanging">open scientific questions, in plain words</text>
+    <!-- right: credit -->
+    <text x="1130" y="0"  text-anchor="end" font-family="Nunito, system-ui" font-weight="700" font-size="20" fill="#2D2622" dominant-baseline="hanging">by Ahmet Barış Günaydın</text>
+    <text x="1130" y="28" text-anchor="end" font-family="Nunito, system-ui" font-weight="500" font-size="16" fill="#5C4A3F" dominant-baseline="hanging">barisgunaydin.com</text>
+  </g>
 </svg>
