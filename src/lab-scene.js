@@ -1657,13 +1657,13 @@ export class LabScene {
       axTex.magFilter  = THREE.LinearFilter;
       const axMat  = new THREE.MeshBasicMaterial({
         map: axTex, transparent: true, alphaTest: 0.04,
-        side: THREE.FrontSide, depthWrite: false,
+        side: THREE.DoubleSide, depthWrite: false,
       });
       const axMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.128), axMat);
       axMesh.position.set(0, 0.13, 0.001);
       grp.add(axMesh);
 
-      const axSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 128">
+      const axSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="128" viewBox="0 0 160 128">
         <!-- gills (3 frilly stems on each side, drawn behind body) -->
         <g stroke="#E58B82" stroke-width="3.5" fill="#FF9B94" stroke-linejoin="round">
           <path d="M 110 50 Q 130 38 134 26 Q 116 32 102 44"/>
@@ -1694,14 +1694,14 @@ export class LabScene {
         <path d="M 72 76 Q 80 82 88 76" fill="none" stroke="#2D2622" stroke-width="2" stroke-linecap="round"/>
       </svg>`;
       const _img = new Image();
-      const _url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(axSvg);
       _img.onload = () => {
         const c = axCanvas.getContext('2d');
         c.clearRect(0, 0, axCanvas.width, axCanvas.height);
         c.drawImage(_img, 0, 0, axCanvas.width, axCanvas.height);
         axTex.needsUpdate = true;
       };
-      _img.src = _url;
+      _img.onerror = (e) => console.warn('[wonderlab] axolotl SVG failed to decode', e);
+      _img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(axSvg);
 
       // tag for click + tooltip
       [lid, glass, water, axMesh].forEach(m => { m.userData.kind = 'axolotl'; });
@@ -1735,7 +1735,7 @@ export class LabScene {
       plane.position.set(-0.4, startY, 1.7);
       this.world.add(plane);
 
-      const catSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 160">
+      const catSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="160" viewBox="0 0 220 160">
         <!-- tail: long, curving up behind -->
         <path d="M 175 95 Q 200 70 195 35 Q 188 18 180 22"
               fill="none" stroke="#2D2622" stroke-width="14" stroke-linecap="round"/>

@@ -1299,8 +1299,9 @@
 
   /* share modal */
   /* share button in the top bar — same shape as the gear, sun-yellow
-     tint so visitors notice they can share before they've asked anything */
-  .top-share-btn {
+     tint so visitors notice they can share before they've asked anything.
+     ID selector beats the generic ".panel-toggles button" pill style. */
+  #share-top-btn {
     appearance: none;
     border: 2px solid var(--ink);
     border-radius: 50%;
@@ -1312,9 +1313,11 @@
     box-shadow: var(--shadow-sm);
     transition: transform .12s ease, background .15s ease, box-shadow .12s ease;
     padding: 0;
+    font-size: 0;     /* drop any inherited text node line-height */
   }
-  .top-share-btn:hover  { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink); background: var(--sun-deep); }
-  .top-share-btn:active { transform: translate(1px, 1px); box-shadow: 0 0 0 var(--ink); }
+  #share-top-btn svg { display: block; }
+  #share-top-btn:hover  { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink); background: var(--sun-deep); }
+  #share-top-btn:active { transform: translate(1px, 1px); box-shadow: 0 0 0 var(--ink); }
 
   /* gear button — tucked next to chat/questions toggles in the top bar */
   #settings-btn {
