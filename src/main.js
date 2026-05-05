@@ -547,6 +547,11 @@ const TOOLTIP_LABELS = {
   mug: 'hot chocolate', lamp: 'lamp', papers: 'notes',
   whiteboard: 'whiteboard',
   microscope: 'microscope',
+  axolotl: 'pebble the axolotl',
+  atom: 'atom model',
+  dna: 'dna helix',
+  beakers: 'beaker rack',
+  bookshelf: 'bookshelf',
 };
 
 let _tooltipEl = null;

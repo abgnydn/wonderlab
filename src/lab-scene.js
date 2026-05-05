@@ -1459,6 +1459,102 @@ export class LabScene {
       this._globe = globeGroup;
     }
 
+    // === AXOLOTL in a glass jar on the desk — clickable pet ===
+    // Cute pink axolotl SVG billboard inside a transparent glass cylinder.
+    // Idle: floats up + down + tiny rotation. Click: little wiggle.
+    {
+      const grp = new THREE.Group();
+      // jar lid (dark cap)
+      const lid = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.115, 0.115, 0.025, 18),
+        new THREE.MeshStandardMaterial({ color: 0x4a5570, roughness: 0.55 })
+      );
+      lid.position.y = 0.30;
+      grp.add(lid);
+      // glass cylinder (thin shell)
+      const glass = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.11, 0.11, 0.30, 22, 1, true),
+        new THREE.MeshStandardMaterial({
+          color: 0xffffff, transparent: true, opacity: 0.18,
+          roughness: 0.05, side: THREE.DoubleSide,
+        })
+      );
+      glass.position.y = 0.15;
+      grp.add(glass);
+      // water inside (slightly tinted, fills ~80% of jar)
+      const water = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.103, 0.103, 0.24, 22),
+        new THREE.MeshStandardMaterial({
+          color: 0xB5DCEB, transparent: true, opacity: 0.5,
+          roughness: 0.3,
+        })
+      );
+      water.position.y = 0.13;
+      grp.add(water);
+      // axolotl billboard — SVG rasterized to a canvas texture
+      const axCanvas = document.createElement('canvas');
+      axCanvas.width  = 160;
+      axCanvas.height = 128;
+      const axTex = new THREE.CanvasTexture(axCanvas);
+      axTex.colorSpace = THREE.SRGBColorSpace;
+      axTex.minFilter  = THREE.LinearFilter;
+      axTex.magFilter  = THREE.LinearFilter;
+      const axMat  = new THREE.MeshBasicMaterial({
+        map: axTex, transparent: true, alphaTest: 0.04,
+        side: THREE.FrontSide, depthWrite: false,
+      });
+      const axMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.128), axMat);
+      axMesh.position.set(0, 0.13, 0.001);
+      grp.add(axMesh);
+
+      const axSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 128">
+        <!-- gills (3 frilly stems on each side, drawn behind body) -->
+        <g stroke="#E58B82" stroke-width="3.5" fill="#FF9B94" stroke-linejoin="round">
+          <path d="M 110 50 Q 130 38 134 26 Q 116 32 102 44"/>
+          <path d="M 116 60 Q 142 56 144 42 Q 124 50 110 56"/>
+          <path d="M 116 70 Q 144 76 142 60 Q 124 64 110 64"/>
+          <path d="M 50 50 Q 30 38 26 26 Q 44 32 58 44"/>
+          <path d="M 44 60 Q 18 56 16 42 Q 36 50 50 56"/>
+          <path d="M 44 70 Q 16 76 18 60 Q 36 64 50 64"/>
+        </g>
+        <!-- tail: little point on top -->
+        <path d="M 80 16 Q 70 8 80 6 Q 90 8 80 16 Z" fill="#FFB7A8" stroke="#2D2622" stroke-width="2.5" stroke-linejoin="round"/>
+        <!-- body: chubby oval -->
+        <ellipse cx="80" cy="68" rx="38" ry="26" fill="#FFB7A8" stroke="#2D2622" stroke-width="3" stroke-linejoin="round"/>
+        <!-- belly highlight -->
+        <ellipse cx="80" cy="78" rx="22" ry="10" fill="#FFD7CE" opacity="0.7"/>
+        <!-- legs (stubby) -->
+        <ellipse cx="58" cy="98" rx="7" ry="4" fill="#FFB7A8" stroke="#2D2622" stroke-width="2.5"/>
+        <ellipse cx="102" cy="98" rx="7" ry="4" fill="#FFB7A8" stroke="#2D2622" stroke-width="2.5"/>
+        <!-- eyes (two beady) -->
+        <circle cx="70" cy="62" r="3.2" fill="#2D2622"/>
+        <circle cx="90" cy="62" r="3.2" fill="#2D2622"/>
+        <circle cx="71" cy="61" r="1" fill="#FFFFFF"/>
+        <circle cx="91" cy="61" r="1" fill="#FFFFFF"/>
+        <!-- cheeks -->
+        <ellipse cx="58" cy="72" rx="5" ry="2.5" fill="#FF8AAD" opacity="0.6"/>
+        <ellipse cx="102" cy="72" rx="5" ry="2.5" fill="#FF8AAD" opacity="0.6"/>
+        <!-- smile -->
+        <path d="M 72 76 Q 80 82 88 76" fill="none" stroke="#2D2622" stroke-width="2" stroke-linecap="round"/>
+      </svg>`;
+      const _img = new Image();
+      const _url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(axSvg);
+      _img.onload = () => {
+        const c = axCanvas.getContext('2d');
+        c.clearRect(0, 0, axCanvas.width, axCanvas.height);
+        c.drawImage(_img, 0, 0, axCanvas.width, axCanvas.height);
+        axTex.needsUpdate = true;
+      };
+      _img.src = _url;
+
+      // tag for click + tooltip
+      [lid, glass, water, axMesh].forEach(m => { m.userData.kind = 'axolotl'; });
+      // sit on the desk surface (y=1.04). a little forward of centre.
+      grp.position.set(0.7, 1.04, 1.7);
+      this.world.add(grp);
+      this._axolotl = { group: grp, fish: axMesh, ping: 0, baseY: 0.13 };
+    }
+
     // === BOOKSHELF against the LEFT wall — colorful book spines ===
     {
       const grp = new THREE.Group();
@@ -1873,6 +1969,7 @@ export class LabScene {
     if (this._dna)        objs.push(this._dna.root);
     if (this._beakerCart) objs.push(this._beakerCart);
     if (this._bookshelf)  objs.push(this._bookshelf);
+    if (this._axolotl)    objs.push(this._axolotl.group);
     return objs;
   }
 
@@ -1915,6 +2012,7 @@ export class LabScene {
     }
     if (kind === 'atom' && this._atom) this._atom.boost = 2.5;
     if (kind === 'dna' && this._dna)   this._dna.ping = performance.now() / 1000;
+    if (kind === 'axolotl' && this._axolotl) this._axolotl.ping = performance.now() / 1000;
     if (kind === 'beakers' && this._beakerBubbles) {
       for (const b of this._beakerBubbles) b.surge = 1.0;
     }
@@ -2116,6 +2214,16 @@ export class LabScene {
 
     // === whiteboard loading state — animated cue while iris is generating ===
     if (this._loading) this._paintLoadingFrame(t);
+
+    // === axolotl — float gently up/down; click adds a tiny wiggle ===
+    if (this._axolotl) {
+      const ax = this._axolotl;
+      const wiggleDt = t - ax.ping;
+      const wiggleX = wiggleDt < 0.7 ? Math.sin(wiggleDt * 22) * 0.012 * (1 - wiggleDt / 0.7) : 0;
+      ax.fish.position.y = ax.baseY + Math.sin(t * 0.9) * 0.012 + Math.sin(t * 0.3) * 0.005;
+      ax.fish.position.x = wiggleX;
+      ax.fish.rotation.z = Math.sin(t * 0.7) * 0.06;
+    }
 
     // === draw ===
     this.controls.update();
