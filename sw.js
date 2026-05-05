@@ -1,55 +1,62 @@
 // =============================================================
-// sw.js — service worker that caches the Kokoro TTS model files
-// (and any other huggingface assets) to disk on first download.
-// Subsequent page loads serve them instantly from Cache Storage,
-// regardless of whether transformers.js's own caching kicks in.
+// sw.js — service worker for wonderlab.
 //
-// Lives at the root of the site so its scope covers everything.
-// Registered from src/main.js.
+// Two jobs, neither of which is a generic CDN cache:
+//
+//   1. Kokoro / transformers.js: shadow huggingface.co/onnx-community/
+//      Kokoro* and *.hf.co CDN bytes so first-load latency only
+//      happens once per visitor.
+//
+//   2. WebLLM × HuggingFace redirect cleansing.
+//      WebLLM's internal Cache.add() rejects any Response with
+//      `response.redirected === true`. HuggingFace serves the model
+//      shards as 302 redirects (huggingface.co → xethub.hf.co →
+//      cas-bridge.xethub.hf.co), which means the FINAL response the
+//      browser hands WebLLM always has redirected:true and the
+//      Cache.add() call crashes with "encountered a network error".
+//      That's the error visitors see when they pick WebLLM and ask
+//      a question for the first time.
+//
+//      The fix: intercept the request here, follow the redirect
+//      ourselves, then construct a NEW Response from the body —
+//      that new Response has redirected:false, so WebLLM's
+//      Cache.add() accepts it cleanly.
+//
+// Lives at the root so its scope covers everything.
 // =============================================================
 
-const CACHE_NAME = 'wonderlab-models-v3';
+const CACHE_NAME = 'wonderlab-models-v4';
 
-// We ONLY shadow Kokoro / transformers.js asset paths. Anything else —
-// especially WebLLM's model shards under huggingface.co/mlc-ai/* — must
-// pass straight through, because:
-//
-//   • WebLLM uses Cache.add(url) on those shards itself.
-//   • huggingface.co serves them as 302 redirects to xethub.hf.co.
-//   • If we intercept, our fetch() follows the redirect, returns a
-//     redirected Response, and WebLLM's Cache.add then rejects with
-//     "encountered a network error" because Cache.add does NOT accept
-//     redirected responses.
-//
-// Path-scoped allowlist instead of host-scoped — only Kokoro repos
-// (huggingface.co/onnx-community/Kokoro*) and HF blob/resolve paths
-// from the same org get our caching layer.
+// Kokoro/transformers asset matchers
 const KOKORO_PATH_RE = /^\/onnx-community\/Kokoro/i;
-
-// Hosts that ONLY ever serve Kokoro / transformers.js bytes can stay
-// fully shadowed by hostname (their CDN names — kept narrow on purpose).
-const ALWAYS_SHADOW_HOSTS = [
+const KOKORO_HOSTS = [
   'cdn-lfs.huggingface.co',
   'cdn-lfs.hf.co',
 ];
 
+// WebLLM model matchers — both the canonical HF repo path AND the
+// xethub redirect target. Both need cleansing because the redirect
+// chain trips Cache.add() either way.
+const WEBLLM_PATH_RE = /\/mlc-ai\//i;
+const WEBLLM_HOSTS = [
+  'cas-bridge.xethub.hf.co',
+  'xethub.hf.co',
+];
+
 self.addEventListener('install', (event) => {
-  // activate this SW as soon as it's installed
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    // wipe any pre-v2 caches we left behind so they don't poison new
-    // requests that were intercepted under broader hostname rules
+    // wipe any older wonderlab caches so requests can't be served from
+    // pre-fix entries that may carry the redirected flag
     const names = await caches.keys();
     await Promise.all(
       names
         .filter(n => n.startsWith('wonderlab-') && n !== CACHE_NAME)
         .map(n => caches.delete(n))
     );
-    // take control of any open clients (so the very first page load
-    // gets caching immediately, no second-refresh needed)
     await self.clients.claim();
   })());
 });
@@ -61,33 +68,51 @@ self.addEventListener('fetch', (event) => {
   let url;
   try { url = new URL(req.url); } catch { return; }
 
-  // pass-through unless this is unambiguously a Kokoro/transformers asset:
-  //   • CDN-LFS subdomain (always Kokoro/HF model bytes)
-  //   • huggingface.co with a path under /onnx-community/Kokoro*
-  // anything else (WebLLM repos under huggingface.co/mlc-ai/*, the rest
-  // of the open web) escapes this SW completely.
-  const isCdnLfs   = ALWAYS_SHADOW_HOSTS.includes(url.hostname);
-  const isKokoroHf = url.hostname === 'huggingface.co' && KOKORO_PATH_RE.test(url.pathname);
-  if (!isCdnLfs && !isKokoroHf) return;
+  const isKokoroCdn   = KOKORO_HOSTS.includes(url.hostname);
+  const isKokoroHf    = url.hostname === 'huggingface.co' && KOKORO_PATH_RE.test(url.pathname);
+  const isWebllmHf    = url.hostname === 'huggingface.co' && WEBLLM_PATH_RE.test(url.pathname);
+  const isWebllmCdn   = WEBLLM_HOSTS.includes(url.hostname);
+  const needsCleansing = isWebllmHf || isWebllmCdn;
+  const wantsHandling  = isKokoroCdn || isKokoroHf || needsCleansing;
+
+  if (!wantsHandling) return;
 
   event.respondWith((async () => {
-    const cache = await caches.open(CACHE_NAME);
+    const cache  = await caches.open(CACHE_NAME);
     const cached = await cache.match(req);
-    if (cached) {
-      // fast path — serve from disk cache
-      return cached;
-    }
-    // not cached yet — fetch from network and write to cache
+    if (cached) return cached;
+
     try {
-      const response = await fetch(req);
-      // cache successful responses (2xx) and "no-content" 304s
-      if (response && response.status === 200) {
-        // clone before consuming since Response is one-shot
-        cache.put(req, response.clone()).catch(() => {});
+      // Use 'follow' redirect mode so we get the final response.
+      const response = await fetch(req, { redirect: 'follow' });
+      if (!response || response.status !== 200) return response;
+
+      // If the browser flagged this response as redirected (or its type
+      // is opaqueredirect / opaque), Cache.add() will reject it.
+      // Rebuild a fresh Response from the body so redirected:false.
+      let toReturn = response;
+      if (response.redirected || response.type === 'opaqueredirect') {
+        const body = await response.blob();
+        // copy a useful subset of headers (Cache-Control, Content-Type,
+        // Content-Length) — strip ones that don't make sense on a fresh
+        // synthesised response (e.g., Date, Server, X-Amz-*)
+        const headers = new Headers();
+        for (const k of ['content-type', 'content-length', 'cache-control', 'last-modified', 'etag']) {
+          const v = response.headers.get(k);
+          if (v) headers.set(k, v);
+        }
+        toReturn = new Response(body, {
+          status:     200,
+          statusText: 'OK',
+          headers,
+        });
       }
-      return response;
+
+      // cache for next visit (use a cleansed clone so cache.put never
+      // sees a redirected response either)
+      cache.put(req, toReturn.clone()).catch(() => {});
+      return toReturn;
     } catch (err) {
-      // network failure — return any partial cache match if available
       const fallback = await cache.match(req);
       return fallback || Response.error();
     }
