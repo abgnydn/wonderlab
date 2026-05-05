@@ -1590,6 +1590,63 @@
   .settings-status[data-kind="ok"]    { color: var(--leaf-deep); font-weight: 700; }
   .settings-status[data-kind="error"] { color: var(--rose); font-weight: 700; }
 
+  /* storage card — list of cached model bundles, sizes, delete buttons */
+  .settings-storage {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.86rem;
+    color: var(--ink);
+  }
+  .settings-storage__total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.25rem 0.1rem;
+    color: var(--ink-soft);
+    font-weight: 600;
+    border-bottom: 1.5px dashed rgba(45, 38, 34, 0.18);
+    margin-bottom: 0.25rem;
+  }
+  .settings-storage__total b { color: var(--ink); font-weight: 700; font-size: 0.95rem; }
+  .settings-storage__row {
+    display: flex; align-items: center; gap: 0.55rem;
+    background: var(--cream);
+    border: 1.6px solid var(--ink);
+    border-radius: 8px;
+    padding: 0.4rem 0.55rem;
+  }
+  .settings-storage__row.webllm { background: rgba(255, 209, 107, 0.32); }
+  .settings-storage__row.tts    { background: rgba(184, 223, 160, 0.32); }
+  .settings-storage__row__main  { flex: 1; min-width: 0; }
+  .settings-storage__row__name  { font-weight: 700; color: var(--ink); }
+  .settings-storage__row__meta  { color: var(--ink-soft); font-size: 0.78rem; }
+  .settings-storage__row button {
+    appearance: none;
+    background: white;
+    color: var(--ink);
+    border: 1.8px solid var(--ink);
+    border-radius: 999px;
+    padding: 0.22rem 0.6rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 0.74rem;
+    cursor: pointer;
+    box-shadow: 1px 1px 0 var(--ink);
+  }
+  .settings-storage__row button:hover { background: var(--peach); }
+  .settings-storage__empty {
+    color: var(--ink-soft);
+    font-style: italic;
+    padding: 0.4rem 0.1rem;
+  }
+  .settings-storage__actions {
+    display: flex; gap: 0.5rem; margin-top: 0.3rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
   .settings-privacy {
     font-family: 'Nunito', sans-serif;
     font-size: 0.84rem;
@@ -2725,6 +2782,12 @@
             <span class="settings-help">soft procedural pentatonic — generated in the browser, no audio file shipped</span>
           </span>
         </label>
+      </div>
+
+      <!-- STORAGE — what's cached, how much, and how to clear it -->
+      <div class="settings-card">
+        <div class="settings-card__title">storage</div>
+        <div class="settings-storage" id="settings-storage">checking…</div>
       </div>
 
       <!-- PRIVACY NOTE -->

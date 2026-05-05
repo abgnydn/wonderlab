@@ -13,6 +13,9 @@ import {
   bumpField, loadFieldCounts, clearFieldCounts, FIELD_FURNITURE,
 } from './lab-grow.js';
 import {
+  getStorageInfo, clearCache, clearAllModelStorage, fmtBytes, prettyName,
+} from './storage-info.js';
+import {
   renderShareCard,
   downloadCanvasAsPng,
   copyCanvasToClipboard,
@@ -903,6 +906,73 @@ function rebuildSettingsContents() {
       audio.music?.(musicT.checked);
     };
   }
+
+  // storage card — list cached models, show total, allow delete
+  renderStorageCard();
+}
+
+async function renderStorageCard() {
+  const host = $('settings-storage');
+  if (!host) return;
+  host.textContent = 'checking…';
+  let info;
+  try { info = await getStorageInfo(); }
+  catch (e) { host.textContent = 'couldn\'t read storage.'; return; }
+
+  host.innerHTML = '';
+
+  // total line
+  const total = document.createElement('div');
+  total.className = 'settings-storage__total';
+  if (info.quota) {
+    const pct = info.quota ? Math.round((info.usage / info.quota) * 100) : 0;
+    total.innerHTML = `<span>this site uses</span><span><b>${escapeHTML(fmtBytes(info.usage))}</b> of ${escapeHTML(fmtBytes(info.quota))} quota (~${pct}%)</span>`;
+  } else {
+    total.innerHTML = `<span>this site uses</span><span><b>${escapeHTML(fmtBytes(info.usage))}</b> on disk</span>`;
+  }
+  host.appendChild(total);
+
+  // per-cache rows. measured size sometimes 0 if HF CDN headers omit
+  // content-length — note that case so the visitor doesn't think it's broken.
+  const interesting = info.caches.filter(c => c.kind !== 'other');
+  if (!interesting.length) {
+    const empty = document.createElement('div');
+    empty.className = 'settings-storage__empty';
+    empty.textContent = 'nothing cached yet — first time you ask via WebLLM the model lands here.';
+    host.appendChild(empty);
+  } else {
+    for (const c of interesting) {
+      const row = document.createElement('div');
+      row.className = 'settings-storage__row ' + c.kind;
+      const sizeStr = c.bytes
+        ? fmtBytes(c.bytes) + (c.measured < c.count ? ' (estimate)' : '')
+        : c.count + ' files · size unknown';
+      row.innerHTML = `
+        <div class="settings-storage__row__main">
+          <div class="settings-storage__row__name">${escapeHTML(prettyName(c.name))}</div>
+          <div class="settings-storage__row__meta">${escapeHTML(sizeStr)} · ${c.count} ${c.count === 1 ? 'file' : 'files'}</div>
+        </div>
+        <button type="button" data-cache="${escapeAttr(c.name)}">delete</button>
+      `;
+      row.querySelector('button').addEventListener('click', async () => {
+        if (!confirm(`Delete ${prettyName(c.name)}? Next use will re-download it.`)) return;
+        await clearCache(c.name);
+        renderStorageCard();
+      });
+      host.appendChild(row);
+    }
+  }
+
+  // bulk action
+  const actions = document.createElement('div');
+  actions.className = 'settings-storage__actions';
+  actions.innerHTML = `<button type="button" id="settings-clear-all-models" class="settings-action">clear all model caches</button>`;
+  host.appendChild(actions);
+  actions.querySelector('#settings-clear-all-models').addEventListener('click', async () => {
+    if (!confirm('Clear all WebLLM + voice-model caches? Next time you ask, the model will re-download (~1GB on Llama-3.2-1B).')) return;
+    await clearAllModelStorage();
+    renderStorageCard();
+  });
 }
 
 // Inline help block shown when LM Studio is selected on the live (HTTPS)
