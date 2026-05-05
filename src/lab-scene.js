@@ -1661,9 +1661,12 @@ export class LabScene {
       axTex.colorSpace = THREE.SRGBColorSpace;
       axTex.minFilter  = THREE.LinearFilter;
       axTex.magFilter  = THREE.LinearFilter;
+      // alphaTest only (no blending) so the billboard renders in three.js's
+      // OPAQUE pass — completely sidesteps transparency-sort fights with
+      // the glass cylinder + tint disc that surround it.
       const axMat  = new THREE.MeshBasicMaterial({
-        map: axTex, transparent: true, alphaTest: 0.04,
-        side: THREE.DoubleSide, depthWrite: false,
+        map: axTex, alphaTest: 0.5,
+        side: THREE.DoubleSide,
       });
       const axMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.128), axMat);
       axMesh.position.set(0, 0.13, 0.001);
@@ -2722,14 +2725,19 @@ export class LabScene {
       cat.plane.rotation.z = moving ? Math.sin(t * 6) * 0.04 : 0;
     }
 
-    // === axolotl — float gently up/down; click adds a tiny wiggle ===
+    // === axolotl — float gently up/down; click adds a tiny squish-pulse ===
     if (this._axolotl) {
       const ax = this._axolotl;
-      const wiggleDt = t - ax.ping;
-      const wiggleX = wiggleDt < 0.7 ? Math.sin(wiggleDt * 22) * 0.012 * (1 - wiggleDt / 0.7) : 0;
+      // float — slow vertical drift, doesn't move her left/right
       ax.fish.position.y = ax.baseY + Math.sin(t * 0.9) * 0.012 + Math.sin(t * 0.3) * 0.005;
-      ax.fish.position.x = wiggleX;
-      ax.fish.rotation.z = Math.sin(t * 0.7) * 0.06;
+      ax.fish.position.x = 0;
+      // very small idle tilt (3°) only — keeps her facing forward
+      ax.fish.rotation.z = Math.sin(t * 0.7) * 0.04;
+      // click pulse: brief scale-bump that decays in 0.6s, no x-translation
+      const pulseDt = t - ax.ping;
+      const pulse = pulseDt < 0.6 ? Math.sin(pulseDt * 11) * 0.15 * (1 - pulseDt / 0.6) : 0;
+      ax.fish.scale.x = 1 + Math.abs(pulse) * 0.4;
+      ax.fish.scale.y = 1 - pulse * 0.25;
     }
 
     // === draw ===
