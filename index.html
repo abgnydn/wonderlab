@@ -1200,6 +1200,23 @@
     font-weight: 700;
   }
 
+  /* WebLLM-vs-drawing reality check — appears under the draw checkbox
+     only when the combo (WebLLM backend + drawing-on) is likely to
+     disappoint. Peach so it reads as "heads up, not error". */
+  .settings-draw-hint {
+    background: rgba(255, 183, 168, 0.55);
+    border: 1.6px solid var(--ink);
+    border-radius: 10px;
+    padding: 0.5rem 0.7rem;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.82rem;
+    color: var(--ink);
+    line-height: 1.4;
+    margin-top: 0.4rem;
+  }
+  .settings-draw-hint[hidden] { display: none; }
+  .settings-draw-hint em      { font-style: normal; font-weight: 700; color: var(--rose); }
+
   /* benchmark chip — Hugging Science breadcrumb under the answer card.
      One-click bridge from the kid answer to the real open challenge.
      Sky-blue tint so it visually feels like the "research side" of the
@@ -2964,6 +2981,7 @@
             <span class="settings-help">off = text-only mode (much faster, works on small/local models)</span>
           </span>
         </label>
+        <div id="settings-draw-hint" class="settings-draw-hint" hidden></div>
         <label class="settings-toggle-row">
           <input type="checkbox" id="settings-voice-toggle">
           <span>

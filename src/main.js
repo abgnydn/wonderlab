@@ -951,6 +951,8 @@ function rebuildSettingsContents() {
           const s = loadSettings();
           s.models[conn.id] = e.target.value;
           saveSettings(s);
+          refreshActiveBackendChip();
+          refreshDrawHint();
         });
       }
     }
@@ -964,8 +966,12 @@ function rebuildSettingsContents() {
   const drawT = $('settings-draw-toggle');
   if (drawT) {
     drawT.checked = getDrawPreference();
-    drawT.onchange = () => { setDrawPreference(drawT.checked); };
+    drawT.onchange = () => {
+      setDrawPreference(drawT.checked);
+      refreshDrawHint();
+    };
   }
+  refreshDrawHint();
 
   // voice toggle (master "iris speaks aloud" switch — off by default)
   const voiceT = $('settings-voice-toggle');
@@ -989,6 +995,28 @@ function rebuildSettingsContents() {
 
   // storage card — list cached models, show total, allow delete
   renderStorageCard();
+}
+
+// Surface the "WebLLM small models don't reliably draw" reality next to
+// the draw checkbox, so flipping it on with WebLLM doesn't feel broken.
+// Visible only when the active backend is WebLLM AND drawing is ON.
+function refreshDrawHint() {
+  const hint = $('settings-draw-hint');
+  if (!hint) return;
+  const s = loadSettings();
+  const conn = getActiveConnector(s);
+  const isWebllm = conn?.id === 'webllm';
+  const drawOn   = getDrawPreference();
+  if (isWebllm && drawOn) {
+    const model = s.models.webllm || '';
+    const isSmall = /-(0\.5B|1B)-/i.test(model) || !model;
+    hint.hidden = false;
+    hint.innerHTML = isSmall
+      ? `<strong>heads up</strong> — small WebLLM models (1B) often skip or break the SVG. for reliable drawings, switch to <em>Claude</em> or <em>Gemini</em> in the backend picker, or try the 3B / Phi model in the dropdown above.`
+      : `WebLLM 3B+ usually draws OK, but small browser models are hit-or-miss with complex scenes. <em>Claude</em> / <em>Gemini</em> remain the most reliable for drawings.`;
+  } else {
+    hint.hidden = true;
+  }
 }
 
 async function renderStorageCard() {
