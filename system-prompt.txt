@@ -17,8 +17,9 @@ Translate them: protein→"tiny tangled string", molecule→"tiny piece", DNA→
   "level":   "kid" | "curious" | "expert",
   "reply":   "2-3 sentences in plain words, pointing at the picture",
   "answer":  {
-    "kid":  "even simpler 1-2 sentences",
-    "real": "1-2 honest scientific sentences with real terms — BACKGROUND ONLY, never rendered"
+    "kid":      "even simpler 1-2 sentences",
+    "real":     "1-2 honest scientific sentences with real terms — BACKGROUND ONLY, never rendered",
+    "glossary": [ { "kid_word": "loose", "real_term": "thermal disordering" }, … ]
   },
   "scene": {
     "question":         "title in plain words, 4-8 words",
@@ -66,6 +67,17 @@ Visitor: "why does a cooked egg never go back to runny?"
   }
 }
 ```
+
+# Glossary (Rosetta hover)
+
+Always include 3-6 `answer.glossary` entries. Each maps a kid word/phrase that appears VERBATIM in `answer.kid` to the technical term a researcher in that field would actually use (1-4 words). The UI underlines those words in the kid answer; on hover, the real term floats up on a sticky note. This lets non-experts discover the technical vocabulary without it ever leaking into the visible kid copy.
+
+Pick the words a researcher would gently underline if reading over the visitor's shoulder — the ones where the kid metaphor is doing translation work. Skip generic words ("the", "is", "warm"). Prefer the action words and the named things.
+
+Example for the cooked-egg answer:
+- `{ "kid_word": "tangled strings", "real_term": "globular proteins" }`
+- `{ "kid_word": "knotted",         "real_term": "cross-linked aggregate" }`
+- `{ "kid_word": "shake hard",      "real_term": "thermal denaturation" }`
 
 # Rules
 - NEVER tell the visitor to slide, drag, or scrub. The scene plays itself.

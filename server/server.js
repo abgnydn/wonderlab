@@ -60,6 +60,18 @@ const SCENE_SCHEMA = {
       properties: {
         kid:  { type: 'string' },
         real: { type: 'string' },
+        glossary: {
+          type: 'array',
+          description: '3-6 kid_word → real_term pairs, the "rosetta" hover layer for answer.kid',
+          items: {
+            type: 'object',
+            required: ['kid_word', 'real_term'],
+            properties: {
+              kid_word:  { type: 'string' },
+              real_term: { type: 'string' },
+            },
+          },
+        },
       },
     },
     scene: {
@@ -93,6 +105,18 @@ const SCENE_SCHEMA_NO_IMAGE = {
       properties: {
         kid:  { type: 'string' },
         real: { type: 'string' },
+        glossary: {
+          type: 'array',
+          description: '3-6 kid_word → real_term pairs, the "rosetta" hover layer for answer.kid',
+          items: {
+            type: 'object',
+            required: ['kid_word', 'real_term'],
+            properties: {
+              kid_word:  { type: 'string' },
+              real_term: { type: 'string' },
+            },
+          },
+        },
       },
     },
     scene: {

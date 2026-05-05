@@ -61,10 +61,16 @@ function paintSpec(spec) {
   // The slider/zoom UI is gone. The visible "answer card" + status pill
   // are the only HTML chrome left for the spec.
   const isWelcome = spec.id === 'welcome';
-  const kid = isWelcome ? '' : (spec.answer?.kid || '');
-  if ($('scene-answer-kid')) {
-    $('scene-answer-kid').textContent = kid;
-    $('scene-answer-kid').closest('.answer-card')?.classList.toggle('visible', !!kid);
+  const kid       = isWelcome ? '' : (spec.answer?.kid || '');
+  const glossary  = isWelcome ? [] : (spec.answer?.glossary || []);
+  const target    = $('scene-answer-kid');
+  if (target) {
+    if (kid && glossary.length) {
+      target.innerHTML = renderRosetta(kid, glossary);
+    } else {
+      target.textContent = kid;
+    }
+    target.closest('.answer-card')?.classList.toggle('visible', !!kid);
   }
   STATUS(spec.question || 'on the whiteboard', 'ok');
 
@@ -137,6 +143,53 @@ function escapeHTML(s) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+// -----------------------------------------------------------
+// Rosetta hover layer — wrap kid_word phrases in answer.kid with a
+// span carrying data-real, so CSS can underline them and a hover
+// sticky-note can show the technical twin. Each kid_word is matched
+// case-insensitively, only the FIRST occurrence is wrapped (so the
+// answer doesn't get peppered by the same underline on every "the").
+// -----------------------------------------------------------
+function renderRosetta(text, glossary) {
+  // sort longest-first so multi-word phrases beat single words on overlap
+  const items = [...glossary]
+    .filter(g => g && g.kid_word && g.real_term)
+    .sort((a, b) => b.kid_word.length - a.kid_word.length);
+
+  // walk a single pass, collecting non-overlapping ranges
+  const lower = text.toLowerCase();
+  const taken = [];   // [start, end) ranges already wrapped, kept sorted
+  const overlaps = (s, e) => taken.some(([ts, te]) => !(e <= ts || s >= te));
+  const slots = [];   // { s, e, real }
+
+  for (const g of items) {
+    const needle = g.kid_word.toLowerCase();
+    if (!needle) continue;
+    let pos = lower.indexOf(needle);
+    while (pos !== -1) {
+      const end = pos + needle.length;
+      if (!overlaps(pos, end)) {
+        slots.push({ s: pos, e: end, real: g.real_term });
+        taken.push([pos, end]);
+        taken.sort((a, b) => a[0] - b[0]);
+        break;                             // only first occurrence
+      }
+      pos = lower.indexOf(needle, pos + 1);
+    }
+  }
+
+  slots.sort((a, b) => a.s - b.s);
+  let out = '';
+  let cur = 0;
+  for (const { s, e, real } of slots) {
+    out += escapeHTML(text.slice(cur, s));
+    out += `<span class="rosetta" tabindex="0" data-real="${escapeHTML(real)}">${escapeHTML(text.slice(s, e))}</span>`;
+    cur = e;
+  }
+  out += escapeHTML(text.slice(cur));
+  return out;
 }
 
 // -----------------------------------------------------------
