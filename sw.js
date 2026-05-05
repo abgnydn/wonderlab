@@ -8,14 +8,25 @@
 // Registered from src/main.js.
 // =============================================================
 
-const CACHE_NAME = 'wonderlab-models-v1';
+const CACHE_NAME = 'wonderlab-models-v2';
 
-// hostnames whose responses we want to cache forever
+// hostnames whose responses we want to cache forever.
+// IMPORTANT: do NOT cover all of *.hf.co — WebLLM's model weights are
+// served via cas-bridge.xethub.hf.co and stored under WebLLM's own
+// internal Cache, which conflicts with this SW intercepting those
+// requests (Cache.add() then fails with a network error). We only
+// shadow the Kokoro / transformers.js CDNs, which are specifically:
 const HF_HOSTS = [
   'huggingface.co',
   'cdn-lfs.huggingface.co',
   'cdn-lfs.hf.co',
-  'hf.co',
+];
+
+// hard exclude any subdomain we know belongs to WebLLM's pipeline,
+// even if a future host rule accidentally matches them:
+const SKIP_HOSTS = [
+  'xethub.hf.co',                    // catches *.xethub.hf.co
+  'cas-bridge.xethub.hf.co',
 ];
 
 self.addEventListener('install', (event) => {
@@ -24,9 +35,19 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  // take control of any open clients (so the very first page load
-  // gets caching immediately, no second-refresh needed)
-  event.waitUntil(self.clients.claim());
+  event.waitUntil((async () => {
+    // wipe any pre-v2 caches we left behind so they don't poison new
+    // requests that were intercepted under broader hostname rules
+    const names = await caches.keys();
+    await Promise.all(
+      names
+        .filter(n => n.startsWith('wonderlab-') && n !== CACHE_NAME)
+        .map(n => caches.delete(n))
+    );
+    // take control of any open clients (so the very first page load
+    // gets caching immediately, no second-refresh needed)
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('fetch', (event) => {
@@ -36,7 +57,12 @@ self.addEventListener('fetch', (event) => {
   let url;
   try { url = new URL(req.url); } catch { return; }
 
-  // only intercept HuggingFace asset requests
+  // hard skip — WebLLM owns these
+  if (SKIP_HOSTS.some(h => url.hostname === h || url.hostname.endsWith('.' + h))) {
+    return;
+  }
+
+  // only intercept Kokoro / transformers.js CDN requests
   if (!HF_HOSTS.some(h => url.hostname === h || url.hostname.endsWith('.' + h))) {
     return;
   }
