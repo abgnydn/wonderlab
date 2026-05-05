@@ -1981,9 +1981,13 @@
 
   .welcome-iris {
     margin: 0 auto 0.4rem;
-    width: 120px; height: 120px;
+    width: 168px; height: 252px;          /* matches the 2:3 viewBox of IRIS */
+    display: flex;
+    align-items: center;
+    justify-content: center;
     animation: irisBounce 2.4s ease-in-out infinite;
   }
+  .welcome-iris svg { width: 100%; height: 100%; display: block; }
   @keyframes irisBounce {
     0%, 100% { transform: translateY(0); }
     50%      { transform: translateY(-6px); }
@@ -2623,24 +2627,10 @@
   <!-- ============ WELCOME OVERLAY (first-visit name + voice picker) ============ -->
   <div class="welcome-overlay" id="welcome-overlay" hidden>
     <div class="welcome-card">
-      <div class="welcome-iris" aria-hidden="true">
-        <svg viewBox="0 0 120 120" width="120" height="120">
-          <ellipse cx="60" cy="115" rx="40" ry="4" fill="#5C4A3F" opacity=".25"/>
-          <ellipse cx="60" cy="60"  rx="40" ry="48" fill="#fbd2b0" stroke="#2D2622" stroke-width="2.5"/>
-          <path d="M22 38 Q 18 12 60 8 Q 102 12 98 38 Q 100 50 92 60 Q 88 50 80 56 Q 70 48 60 56 Q 50 48 40 56 Q 32 50 28 60 Q 20 50 22 38 Z" fill="#6b4226" stroke="#2D2622" stroke-width="2"/>
-          <g fill="none" stroke="#2D2622" stroke-width="2.4">
-            <circle cx="48" cy="58" r="9"/><circle cx="72" cy="58" r="9"/>
-            <line x1="57" y1="57" x2="63" y2="57" stroke-width="2.6"/>
-          </g>
-          <circle cx="48" cy="58" r="3.8" fill="#2D2622"/><circle cx="72" cy="58" r="3.8" fill="#2D2622"/>
-          <circle cx="49.5" cy="56.5" r="1.3" fill="#fff"/><circle cx="73.5" cy="56.5" r="1.3" fill="#fff"/>
-          <ellipse cx="36" cy="72" rx="6" ry="4" fill="#FF9B94" opacity=".75"/>
-          <ellipse cx="84" cy="72" rx="6" ry="4" fill="#FF9B94" opacity=".75"/>
-          <path d="M50 82 Q 60 88 70 82" fill="none" stroke="#C56565" stroke-width="2.5" stroke-linecap="round"/>
-          <ellipse cx="80" cy="14" rx="9" ry="5" fill="#FF8AAD" stroke="#2D2622" stroke-width="1.8"/>
-          <circle cx="80" cy="14" r="2.5" fill="#E0688D" stroke="#2D2622" stroke-width="1.6"/>
-        </svg>
-      </div>
+      <!-- the same Iris that's in the room. Filled at boot by main.js
+           with IRIS.idle from src/iris-art.js so the welcome card and
+           the 3D billboard share one source of truth. -->
+      <div class="welcome-iris" id="welcome-iris" aria-hidden="true"></div>
       <h2 class="welcome-title">welcome to <span class="wmark">wonderlab</span><span class="wstar">✦</span></h2>
       <p class="welcome-line">hi! i'm iris. <strong>what should i call you?</strong></p>
       <input type="text" id="welcome-name-input" placeholder="your name…" maxlength="24" autocomplete="off" />

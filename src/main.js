@@ -8,6 +8,7 @@ import { LabScene }            from './lab-scene.js';
 import { cheeseSpec, makeWelcomeSpec } from './specs/cheese.js';
 import { researcherQuestions } from './researcher-questions.js';
 import * as audio               from './audio.js';
+import { IRIS }                 from './iris-art.js';
 import {
   renderShareCard,
   downloadCanvasAsPng,
@@ -422,7 +423,13 @@ function setupWelcome() {
   const grid     = $('voice-grid');
   const nameInp  = $('welcome-name-input');
   const enterBtn = $('welcome-enter');
+  const irisBox  = $('welcome-iris');
   if (!overlay || !grid || !nameInp || !enterBtn) return;
+
+  // drop the actual IRIS.idle illustration into the welcome card so the
+  // visitor sees the same character that's standing in the lab. One source
+  // of truth — change iris-art.js and this updates too.
+  if (irisBox && IRIS?.idle) irisBox.innerHTML = IRIS.idle;
 
   const savedName  = getName();
   const savedVoice = getStoredVoice();
