@@ -5,7 +5,7 @@
   "type": "module",
   "private": true,
   "license": "MIT",
-  "homepage": "https://wonderlab.app",
+  "homepage": "https://the-wonderlab.pages.dev",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/abgnydn/wonderlab.git"
@@ -14,8 +14,8 @@
     "dev":            "node server/server.js",
     "dev:static":     "npx -y http-server@14 -p 5173 -c-1 .",
     "build":          "node scripts/build.mjs",
-    "deploy":         "npm run build && wrangler pages deploy public --project-name wonderlab --branch main",
-    "deploy:preview": "npm run build && wrangler pages deploy public --project-name wonderlab",
+    "deploy":         "npm run build && wrangler pages deploy public --project-name the-wonderlab --branch main",
+    "deploy:preview": "npm run build && wrangler pages deploy public --project-name the-wonderlab",
     "og":             "rsvg-convert -w 1200 -h 630 og.svg -o og.png"
   },
   "engines": {

@@ -1,6 +1,6 @@
 # wonderlab ✦
 
-[![live](https://img.shields.io/badge/live-wonderlab--9os.pages.dev-FFD16B?style=flat-square&labelColor=2D2622)](https://wonderlab-9os.pages.dev/)
+[![live](https://img.shields.io/badge/live-the--wonderlab.pages.dev-FFD16B?style=flat-square&labelColor=2D2622)](https://the-wonderlab.pages.dev/)
 [![deploy](https://img.shields.io/github/actions/workflow/status/abgnydn/wonderlab/deploy.yml?branch=main&style=flat-square&label=deploy&labelColor=2D2622&color=B8DFA0)](https://github.com/abgnydn/wonderlab/actions/workflows/deploy.yml)
 [![license](https://img.shields.io/badge/license-MIT-FFB7A8?style=flat-square&labelColor=2D2622)](LICENSE)
 [![hosting](https://img.shields.io/badge/hosting-Cloudflare%20Pages-F4B942?style=flat-square&labelColor=2D2622&logo=cloudflare&logoColor=white)](https://pages.cloudflare.com/)

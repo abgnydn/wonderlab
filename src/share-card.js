@@ -179,7 +179,7 @@ export async function renderShareCard(spec, whiteboardCanvas) {
   const FY = H - 56;
   ctx.font = '700 22px "Nunito", sans-serif';
   ctx.fillStyle = C.ink;
-  ctx.fillText('wonderlab.app', PAD, FY);
+  ctx.fillText('the-wonderlab.pages.dev', PAD, FY);
   ctx.font = '500 20px "Nunito", sans-serif';
   ctx.fillStyle = C.inkSoft;
   ctx.textAlign = 'right';

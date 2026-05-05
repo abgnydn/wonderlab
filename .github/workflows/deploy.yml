@@ -41,4 +41,4 @@ jobs:
         with:
           apiToken:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command:   pages deploy public --project-name wonderlab --branch main --commit-dirty=true
+          command:   pages deploy public --project-name the-wonderlab --branch main --commit-dirty=true

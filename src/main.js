@@ -1041,7 +1041,7 @@ function setupShare() {
     try {
       await nativeShareCanvas(cardCanvas, {
         title: 'wonderlab — ' + (currentSpec?.question || 'a question'),
-        text:  (currentSpec?.answer?.kid || currentSpec?._reply || '') + '\n\nasked at wonderlab.app',
+        text:  (currentSpec?.answer?.kid || currentSpec?._reply || '') + '\n\nasked at the-wonderlab.pages.dev',
       });
       setStatus('shared.', 'ok');
     } catch (e) {
