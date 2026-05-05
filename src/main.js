@@ -234,6 +234,8 @@ async function ask(question) {
   // motion the moment they hit send (instead of staring at the previous SVG
   // for ~30s while the model thinks)
   scene.setLoading?.(q);
+  // and switch iris to curious — eyes drift to the board, brows up
+  scene.setMood?.('curious');
 
   // Confirm we have a working backend before dispatching. If the active
   // connector needs a key and the key is empty, open settings instead of
@@ -286,6 +288,14 @@ async function ask(question) {
     setBubble(spec._reply);
     setReplyOnTurn(replyEl, spec._reply, { streaming: false });
     audio.squeak();           // pen squeak as the new scene paints
+
+    // mood pick before talking takes over: read the reply for tone cues.
+    //   uncertainty → wondering · ! → excited · default → idle
+    const reply = (spec._reply || '').toLowerCase();
+    const uncertain = /(we (don'?t|do not)|still (don'?t|study|figuring)|honestly|not (sure|fully)|nobody (yet|knows)|open question|we'?re not sure)/.test(reply);
+    const excited   = /[!?]\s*$/.test((spec._reply || '').trim()) || (spec._reply || '').includes('!');
+    scene.setMood?.(uncertain ? 'wondering' : excited ? 'excited' : 'idle');
+
     // iris reads her reply aloud — show the talking pose while she speaks
     scene.setSpeaking?.(true);
     maybeSpeak(spec._reply);
@@ -304,6 +314,7 @@ async function ask(question) {
     setBubble(msg);
     setReplyOnTurn(replyEl, msg, { streaming: false });
     scene.clearLoading?.();
+    scene.setMood?.('idle');
     console.error(e);
   } finally {
     if (submitBtn) submitBtn.disabled = false;

@@ -681,6 +681,27 @@ export class LabScene {
     else if (!this._blinkActive) this._setPose('idle');
   }
 
+  /**
+   * Set iris's mood — drives both the pose and the body bounce amplitude.
+   *   'idle'      → default
+   *   'curious'   → eyes drift toward the board, brows up (used while
+   *                 the model is thinking / streaming the first words)
+   *   'wondering' → small head-tilt, "hmm" mouth (used when the reply
+   *                 contains uncertainty markers)
+   *   'excited'   → idle pose + bigger Y bounce (used when reply has !)
+   *   'talking'   → handled by setSpeaking(); accepted here too so all
+   *                 four moods route through one function.
+   */
+  setMood(mood) {
+    if (this._talking && mood !== 'idle') return;     // talking takes priority
+    this._mood = mood || 'idle';
+    if (mood === 'curious'   && this._irisPoses?.curious)   this._setPose('curious');
+    else if (mood === 'wondering' && this._irisPoses?.wondering) this._setPose('wondering');
+    else if (mood === 'excited' || mood === 'idle' || !mood) {
+      if (!this._blinkActive) this._setPose('idle');
+    }
+  }
+
   // ---- legacy ctor body removed; the rest of the old function is dropped ----
   _buildResearcher_LEGACY_DEAD() {
     const grp = new THREE.Group();
@@ -2054,8 +2075,14 @@ export class LabScene {
       const step = Math.sign(diff) * Math.min(Math.abs(diff), TURN_SPEED * dt);
       this.researcher.rotation.y += step;
 
-      // body idle bob + click ping
-      const baseY = Math.sin(t * 0.5) * 0.008;
+      // body idle bob + click ping. mood='excited' makes the bob bigger,
+      // 'curious' / 'wondering' make it slightly stiller (she's thinking).
+      const moodAmp = this._mood === 'excited'    ? 0.024
+                    : this._mood === 'curious'    ? 0.005
+                    : this._mood === 'wondering'  ? 0.003
+                    : 0.008;
+      const moodFreq = this._mood === 'excited' ? 1.0 : 0.5;
+      const baseY = Math.sin(t * moodFreq) * moodAmp;
       const ping = this.researcher.userData?._pingT;
       let pingY = 0;
       if (ping != null) {

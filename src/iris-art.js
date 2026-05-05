@@ -244,20 +244,73 @@ function faceTalking() {
   `;
 }
 
+// Curious — eyebrows lifted higher, eyes look slightly down-right (toward
+// the whiteboard), tiny "thinking" half-smile. Used while iris is reading
+// the visitor's question / waiting for the model to start streaming.
+function faceCurious() {
+  return `
+    <!-- eyebrows: arched higher than idle -->
+    <path d="M 240 192 Q 262 178 285 194" fill="none" stroke="${PALETTE.ink}" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M 315 194 Q 338 178 360 192" fill="none" stroke="${PALETTE.ink}" stroke-width="3.5" stroke-linecap="round"/>
+
+    <!-- eye whites -->
+    <ellipse cx="262" cy="234" rx="14" ry="16" fill="${PALETTE.coat}" stroke="${PALETTE.ink}" stroke-width="2"/>
+    <ellipse cx="338" cy="234" rx="14" ry="16" fill="${PALETTE.coat}" stroke="${PALETTE.ink}" stroke-width="2"/>
+    <!-- pupils: shifted right + slightly down (looking at the board) -->
+    <circle cx="268" cy="240" r="8.5" fill="${PALETTE.ink}"/>
+    <circle cx="344" cy="240" r="8.5" fill="${PALETTE.ink}"/>
+    <circle cx="272" cy="236" r="3" fill="${PALETTE.catchlight}"/>
+    <circle cx="348" cy="236" r="3" fill="${PALETTE.catchlight}"/>
+
+    <!-- mouth: small thinking half-smile (slightly off-centre) -->
+    <path d="M 284 296 Q 300 304 316 298" fill="none" stroke="${PALETTE.smile}" stroke-width="3.5" stroke-linecap="round"/>
+  `;
+}
+
+// Wondering / uncertain — small "hmm" mouth + brows tilted asymmetrically.
+// Used when the reply contains uncertainty markers ("we don't fully know",
+// "still studying", "honestly we're not sure"). Conveys honesty.
+function faceWondering() {
+  return `
+    <!-- eyebrows: left flat, right slightly up — "hmm" asymmetry -->
+    <path d="M 240 200 L 285 198" fill="none" stroke="${PALETTE.ink}" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M 315 196 Q 338 184 360 198" fill="none" stroke="${PALETTE.ink}" stroke-width="3.5" stroke-linecap="round"/>
+
+    <!-- eye whites -->
+    <ellipse cx="262" cy="234" rx="14" ry="16" fill="${PALETTE.coat}" stroke="${PALETTE.ink}" stroke-width="2"/>
+    <ellipse cx="338" cy="234" rx="14" ry="16" fill="${PALETTE.coat}" stroke="${PALETTE.ink}" stroke-width="2"/>
+    <!-- pupils: looking up, off into the distance -->
+    <circle cx="263" cy="228" r="8.5" fill="${PALETTE.ink}"/>
+    <circle cx="339" cy="228" r="8.5" fill="${PALETTE.ink}"/>
+    <circle cx="267" cy="224" r="3" fill="${PALETTE.catchlight}"/>
+    <circle cx="343" cy="224" r="3" fill="${PALETTE.catchlight}"/>
+
+    <!-- mouth: small flat "hmm" — slight asymmetry -->
+    <path d="M 286 298 Q 302 296 316 300" fill="none" stroke="${PALETTE.smile}" stroke-width="3.5" stroke-linecap="round"/>
+  `;
+}
+
 // Compose a full SVG given a face function and a marker arm angle.
+// Optional `headTilt` applies a small rotation to the head + face group, so
+// expressions like "wondering" can also tilt iris's head a few degrees.
 function compose(face, opts = {}) {
+  const tilt = opts.headTilt || 0;
+  const headBlock = tilt
+    ? `<g transform="rotate(${tilt} 300 240)">${headBase()}${face()}</g>`
+    : `${headBase()}${face()}`;
   return `<svg viewBox="0 0 600 900" xmlns="http://www.w3.org/2000/svg">
     ${DEFS}
     ${bodyBase(opts)}
-    ${headBase()}
-    ${face()}
+    ${headBlock}
   </svg>`;
 }
 
 // Public poses
 export const IRIS = {
-  idle:     compose(faceIdleSmile, { markerArmAngle: -28 }),
-  blink:    compose(faceBlink,     { markerArmAngle: -28 }),
-  talking:  compose(faceTalking,   { markerArmAngle: -22 }),
-  pointing: compose(faceIdleSmile, { markerArmAngle: -55 }),
+  idle:      compose(faceIdleSmile, { markerArmAngle: -28 }),
+  blink:     compose(faceBlink,     { markerArmAngle: -28 }),
+  talking:   compose(faceTalking,   { markerArmAngle: -22 }),
+  pointing:  compose(faceIdleSmile, { markerArmAngle: -55 }),
+  curious:   compose(faceCurious,   { markerArmAngle: -28 }),
+  wondering: compose(faceWondering, { markerArmAngle: -28, headTilt: -5 }),
 };
