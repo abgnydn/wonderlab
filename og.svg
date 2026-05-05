@@ -66,7 +66,9 @@
     <text x="22" y="208" font-weight="700" font-size="20" fill="#E66363" dominant-baseline="hanging">— Hugging Science / TDC</text>
   </g>
 
-  <!-- footer url -->
-  <text x="70" y="585" font-weight="700" font-size="22" fill="#2D2622">the-wonderlab.pages.dev</text>
-  <text x="1130" y="585" text-anchor="end" font-weight="500" font-size="20" fill="#5C4A3F">open scientific questions, in plain words</text>
+  <!-- footer url + credit -->
+  <text x="70" y="580" font-weight="700" font-size="22" fill="#2D2622">the-wonderlab.pages.dev</text>
+  <text x="70" y="608" font-weight="500" font-size="18" fill="#5C4A3F">open scientific questions, in plain words</text>
+  <text x="1130" y="580" text-anchor="end" font-weight="700" font-size="20" fill="#2D2622">by Ahmet Barış Günaydın</text>
+  <text x="1130" y="606" text-anchor="end" font-weight="500" font-size="18" fill="#5C4A3F">barisgunaydin.com</text>
 </svg>

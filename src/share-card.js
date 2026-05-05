@@ -175,15 +175,19 @@ export async function renderShareCard(spec, whiteboardCanvas) {
     y += stickyH + 24;
   }
 
-  // === FOOTER ===
-  const FY = H - 56;
+  // === FOOTER === — two stacked lines on the right so the credit line
+  // sits next to the URL without crowding either
+  const FY = H - 64;
   ctx.font = '700 22px "Nunito", sans-serif';
   ctx.fillStyle = C.ink;
-  ctx.fillText('the-wonderlab.pages.dev', PAD, FY);
-  ctx.font = '500 20px "Nunito", sans-serif';
+  ctx.fillText('the-wonderlab.pages.dev', PAD, FY + 14);
+  ctx.font = '500 18px "Nunito", sans-serif';
   ctx.fillStyle = C.inkSoft;
   ctx.textAlign = 'right';
-  ctx.fillText('open scientific questions, in plain words', W - PAD, FY + 2);
+  ctx.fillText('open scientific questions, in plain words', W - PAD, FY);
+  ctx.font = '700 18px "Nunito", sans-serif';
+  ctx.fillStyle = C.ink;
+  ctx.fillText('by Ahmet Barış Günaydın · barisgunaydin.com', W - PAD, FY + 26);
   ctx.textAlign = 'left';
 
   return c;

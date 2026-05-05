@@ -141,6 +141,11 @@ up automatically. See `music/CREDITS.txt` for free-music sources.
 
 MIT — see [LICENSE](LICENSE).
 
+## Made by
+
+**Ahmet Barış Günaydın** — [barisgunaydin.com](https://barisgunaydin.com) ·
+[github.com/abgnydn](https://github.com/abgnydn)
+
 ## Story behind the project
 
 Hugging Face launched [Hugging Science](https://huggingface.co/blog/welcome-hugging-science).
