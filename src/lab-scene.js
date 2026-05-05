@@ -1930,6 +1930,175 @@ export class LabScene {
     }
   }
 
+  // ---------- THE LAB GROWS ----------
+  // Public hook called from main.js after each answer. `animate=false`
+  // is used at boot to instantly restore previously-earned furniture.
+  growFurniture(key, animate = true) {
+    if (!key) return null;
+    if (this._grown?.[key]) return this._grown[key];      // already there
+    let group = null;
+    if (key === 'telescope')  group = this._spawnTelescope();
+    else if (key === 'testtubes') group = this._spawnTestTubes();
+    else if (key === 'pendulum')  group = this._spawnPendulum();
+    else if (key === 'petridish') group = this._spawnPetriDish();
+    if (!group) return null;
+    if (!this._grown) this._grown = {};
+    this._grown[key] = group;
+    if (animate) {
+      group.scale.setScalar(0.001);
+      group.userData._spawnT = performance.now() / 1000;
+    }
+    return group;
+  }
+
+  _spawnTelescope() {
+    const grp = new THREE.Group();
+    const wood = new THREE.MeshStandardMaterial({ color: 0x6b4626, roughness: 0.7 });
+    const brass = new THREE.MeshStandardMaterial({ color: 0xc9a05a, roughness: 0.4, metalness: 0.5 });
+    const black = new THREE.MeshStandardMaterial({ color: 0x2D2622, roughness: 0.5 });
+    // tripod (3 angled legs from a centre cap)
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.04, 12), black);
+    cap.position.y = 0.95;
+    grp.add(cap);
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2;
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 1.0, 8), wood);
+      leg.position.set(Math.cos(a) * 0.18, 0.475, Math.sin(a) * 0.18);
+      leg.rotation.z = -Math.cos(a) * 0.20;
+      leg.rotation.x =  Math.sin(a) * 0.20;
+      grp.add(leg);
+    }
+    // tube — angled to "look out" at the upper-back wall
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.085, 0.85, 18), brass);
+    tube.position.set(0, 1.20, 0);
+    tube.rotation.z = Math.PI * 0.45;     // tilt
+    grp.add(tube);
+    // eyepiece
+    const eye = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.08, 12), black);
+    eye.position.set(0.42, 1.10, 0);
+    eye.rotation.z = Math.PI * 0.45;
+    grp.add(eye);
+    // a tiny accent ring near the body — telescope vibe
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.012, 6, 18), black);
+    ring.position.set(-0.22, 1.31, 0);
+    ring.rotation.x = Math.PI * 0.05;
+    ring.rotation.y = Math.PI / 2;
+    grp.add(ring);
+    grp.position.set(-5.2, 0, 0.4);     // back-left, free of the bookshelf
+    grp.rotation.y = Math.PI * 0.18;     // angled toward the room
+    grp.userData.kind = 'telescope';
+    this.world.add(grp);
+    return grp;
+  }
+
+  _spawnTestTubes() {
+    const grp = new THREE.Group();
+    const wood = new THREE.MeshStandardMaterial({ color: 0x8b6240, roughness: 0.65 });
+    // base
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.04, 0.10), wood);
+    base.position.y = 0.02;
+    grp.add(base);
+    // back rail (where tubes hang from holes)
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.10, 0.025), wood);
+    rail.position.set(0, 0.06, -0.038);
+    grp.add(rail);
+    // 5 tubes
+    const tubeColors = [0x6FB05C, 0x7CB7D0, 0xFFD16B, 0xFF9B94, 0xC4A5E0];
+    for (let i = 0; i < 5; i++) {
+      const x = -0.13 + i * 0.065;
+      // glass shell
+      const glass = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.022, 0.022, 0.16, 14, 1, true),
+        new THREE.MeshStandardMaterial({
+          color: 0xffffff, transparent: true, opacity: 0.22,
+          roughness: 0.05, side: THREE.DoubleSide,
+        })
+      );
+      glass.position.set(x, 0.10, 0);
+      grp.add(glass);
+      // fluid inside (~70% full)
+      const fluid = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.020, 0.018, 0.10, 14),
+        new THREE.MeshStandardMaterial({ color: tubeColors[i], roughness: 0.4 })
+      );
+      fluid.position.set(x, 0.07, 0);
+      grp.add(fluid);
+    }
+    grp.position.set(-1.6, 1.04, 1.6);    // sits on the desk top
+    grp.rotation.y = -0.3;
+    grp.userData.kind = 'testtubes';
+    this.world.add(grp);
+    return grp;
+  }
+
+  _spawnPendulum() {
+    // Group origin lives AT the ceiling mount, so rotating the group
+    // around Z swings the whole thing from the right pivot.
+    const grp = new THREE.Group();
+    const black = new THREE.MeshStandardMaterial({ color: 0x2D2622, roughness: 0.4, metalness: 0.4 });
+    const brass = new THREE.MeshStandardMaterial({ color: 0xc9a05a, roughness: 0.35, metalness: 0.6 });
+    // ceiling mount (at the pivot — group origin)
+    const mount = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.03, 0.10), black);
+    mount.position.y = 0;
+    grp.add(mount);
+    // string hangs straight down from the pivot
+    const string = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.005, 0.005, 2.6, 6),
+      new THREE.MeshStandardMaterial({ color: 0x5C4A3F, roughness: 0.85 })
+    );
+    string.position.y = -1.30;
+    grp.add(string);
+    // bob at the bottom of the string
+    const bob = new THREE.Mesh(new THREE.SphereGeometry(0.10, 18, 14), brass);
+    bob.position.y = -2.65;
+    grp.add(bob);
+    grp.userData.kind = 'pendulum';
+    grp.userData.swingPhase = Math.random() * Math.PI * 2;
+    // attach the pivot to a spot near the ceiling, between iris's walking
+    // path and the desk so the bob hangs in clear air
+    grp.position.set(-3.5, 5.5, 1.2);
+    this.world.add(grp);
+    if (!this._pendulums) this._pendulums = [];
+    this._pendulums.push({ group: grp, string, bob });
+    return grp;
+  }
+
+  _spawnPetriDish() {
+    const grp = new THREE.Group();
+    // glass disc
+    const dish = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.10, 0.10, 0.018, 24),
+      new THREE.MeshStandardMaterial({
+        color: 0xffffff, transparent: true, opacity: 0.35,
+        roughness: 0.05,
+      })
+    );
+    dish.position.y = 0.012;
+    grp.add(dish);
+    // agar layer (slightly translucent green)
+    const agar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.094, 0.094, 0.012, 24),
+      new THREE.MeshStandardMaterial({ color: 0xC8E6C9, transparent: true, opacity: 0.85, roughness: 0.4 })
+    );
+    agar.position.y = 0.012;
+    grp.add(agar);
+    // a few colonies (small spheres)
+    const colonyMat = new THREE.MeshStandardMaterial({ color: 0xFFB7A8, roughness: 0.6 });
+    for (let i = 0; i < 5; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * 0.07;
+      const c = new THREE.Mesh(new THREE.SphereGeometry(0.012 + Math.random() * 0.008, 10, 8), colonyMat);
+      c.position.set(Math.cos(a) * r, 0.022, Math.sin(a) * r);
+      c.scale.y = 0.5;
+      grp.add(c);
+    }
+    // sits on the desk near the microscope (microscope is at ~(-2.8, 1.045, 1.35))
+    grp.position.set(-2.3, 1.045, 1.55);
+    grp.userData.kind = 'petridish';
+    this.world.add(grp);
+    return grp;
+  }
+
   _buildBoard() {
     // the wooden frame
     const frame = new THREE.Mesh(
@@ -2376,6 +2545,40 @@ export class LabScene {
 
     // === whiteboard loading state — animated cue while iris is generating ===
     if (this._loading) this._paintLoadingFrame(t);
+
+    // === lab-grow: any furniture spawned with animate=true scales from
+    //     0 → 1 over 1.2s with an ease-out + tiny rotation flourish ===
+    if (this._grown) {
+      for (const k in this._grown) {
+        const g = this._grown[k];
+        const sT = g.userData?._spawnT;
+        if (sT == null) continue;
+        const dt = t - sT;
+        const DUR = 1.2;
+        if (dt < 0) continue;
+        if (dt >= DUR) {
+          g.scale.setScalar(1);
+          g.rotation.y = g.userData._origRotY ?? g.rotation.y;
+          delete g.userData._spawnT;
+        } else {
+          // ease-out cubic
+          const u = 1 - Math.pow(1 - dt / DUR, 3);
+          g.scale.setScalar(0.001 + u * 0.999);
+          if (g.userData._origRotY == null) g.userData._origRotY = g.rotation.y;
+          g.rotation.y = g.userData._origRotY + (1 - u) * Math.PI * 0.4;
+        }
+      }
+    }
+
+    // === pendulum(s) — gentle sinusoidal swing around the ceiling mount ===
+    if (this._pendulums) {
+      for (const p of this._pendulums) {
+        const phase = p.group.userData.swingPhase || 0;
+        const angle = Math.sin(t * 0.85 + phase) * 0.35;     // ±20°
+        // pivot at ceiling mount (top); rotate string + bob together
+        p.group.rotation.z = angle;
+      }
+    }
 
     // === axolotl — float gently up/down; click adds a tiny wiggle ===
     if (this._axolotl) {

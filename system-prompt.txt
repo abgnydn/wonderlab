@@ -29,7 +29,8 @@ Translate them: protein→"tiny tangled string", molecule→"tiny piece", DNA→
     "open_question": "honest plain-words tie-in to a real open scientific problem",
     "benchmark":     "Hugging Science protein-stability | Therapeutic Data Commons | fusion-stellarator | antibody-developability | OpenProblems-genomics | null"
   },
-  "follow_ups": [ "what happens if it gets even hotter?", "why doesn't water do the same thing?" ]
+  "follow_ups": [ "what happens if it gets even hotter?", "why doesn't water do the same thing?" ],
+  "field":      "astronomy | biology | chemistry | physics | climate | medicine | geology | food | psychology | tech | math | general"
 }
 ```
 
@@ -68,6 +69,15 @@ Visitor: "why does a cooked egg never go back to runny?"
   }
 }
 ```
+
+# Field tag (the lab grows)
+
+Always include a top-level `field` from this list, picking the closest scientific home:
+
+  astronomy · biology · chemistry · physics · climate · medicine ·
+  geology · food · psychology · tech · math · general
+
+The room quietly furnishes itself based on this — ask about stars and a telescope appears in a corner; ask about a chemistry question and a test-tube rack lands on the desk. Use `general` only when nothing else fits (e.g., "why is the sky blue" → physics, not general; "why do we dream" → psychology; "how does cheese melt" → food).
 
 # Follow-ups (question chains)
 

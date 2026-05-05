@@ -2265,6 +2265,35 @@
     .active-backend { display: none; }
   }
 
+  /* lab-grow toast — appears top-centre when the room sprouts a piece
+     of furniture. Caveat title, sun-glow background, gentle slide-in
+     from above, auto-dismisses after ~4s. */
+  .grow-toast {
+    position: fixed;
+    top: 4.4rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(-12px);
+    z-index: 50;
+    background: var(--sun);
+    color: var(--ink);
+    border: 2.4px solid var(--ink);
+    border-radius: 14px;
+    padding: 0.55rem 1rem;
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 1.3rem;
+    box-shadow: var(--shadow);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.35s cubic-bezier(.22, 1.6, .4, 1);
+  }
+  .grow-toast[hidden]      { display: none; }
+  .grow-toast.is-visible   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .grow-toast::before {
+    content: "✦ ";
+    color: var(--rose);
+  }
+
   /* public footer — bottom-right, tiny, never blocks the canvas */
   .public-footer {
     position: fixed;
@@ -2621,6 +2650,9 @@
   <!-- chat thread kept in DOM (hidden via CSS) so main.js callsites keep working -->
   <div id="chat-thread" hidden></div>
 
+  <!-- lab-grow toast — slides in when the room sprouts new furniture -->
+  <div id="grow-toast" class="grow-toast" hidden role="status" aria-live="polite"></div>
+
   <!-- public footer — small, unobtrusive, bottom-right -->
   <footer class="public-footer" aria-label="about wonderlab">
     <span class="public-footer__chip public-footer__chip--privacy">
@@ -2703,7 +2735,8 @@
       </div>
 
       <div class="settings-actions-row settings-actions-row--end">
-        <button type="button" id="settings-save" class="settings-action settings-action--primary">save &amp; close</button>
+        <button type="button" id="settings-reset-lab" class="settings-action" title="forget which fields you've asked about; the room goes back to its starting state">reset the lab</button>
+        <button type="button" id="settings-save"      class="settings-action settings-action--primary">save &amp; close</button>
       </div>
     </div>
   </div>

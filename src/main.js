@@ -10,6 +10,9 @@ import { researcherQuestions } from './researcher-questions.js';
 import * as audio               from './audio.js';
 import { IRIS }                 from './iris-art.js';
 import {
+  bumpField, loadFieldCounts, clearFieldCounts, FIELD_FURNITURE,
+} from './lab-grow.js';
+import {
   renderShareCard,
   downloadCanvasAsPng,
   copyCanvasToClipboard,
@@ -51,8 +54,40 @@ function asSceneSpec(reply) {
     _level:    s.level,
     _research: s.research,
     _follow_ups: Array.isArray(s.follow_ups) ? s.follow_ups : [],
+    _field:    typeof s.field === 'string' ? s.field : null,
     _meta:     reply.meta,
   };
+}
+
+// -----------------------------------------------------------
+// the lab grows — call after each answer with the spec's `field`.
+// First time a field appears: scene grows the matching furniture
+// with a 1.2s spawn animation, plus a toast banner.
+// -----------------------------------------------------------
+function growLabFor(field) {
+  if (!field) return;
+  const { newGrowth } = bumpField(field);
+  if (!newGrowth) return;
+  const f = FIELD_FURNITURE[newGrowth];
+  if (!f) return;
+  scene.growFurniture?.(f.key, true);
+  showGrowToast(`the lab grew ${f.label}`);
+}
+
+function showGrowToast(text) {
+  const el = $('grow-toast');
+  if (!el) return;
+  el.textContent = text;
+  el.hidden = false;
+  // double-rAF so transition runs (display: none → visible)
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.classList.add('is-visible');
+  }));
+  clearTimeout(el._dismissT);
+  el._dismissT = setTimeout(() => {
+    el.classList.remove('is-visible');
+    setTimeout(() => { el.hidden = true; }, 350);
+  }, 3800);
 }
 
 // -----------------------------------------------------------
@@ -394,6 +429,9 @@ async function ask(question) {
     };
     setTimeout(settle, 400);
     await loadSpec(spec);
+    // the lab grows: tag-driven furniture spawning. Runs after the spec
+    // has painted so the new piece slides in alongside the answer.
+    growLabFor(spec._field);
   } catch (e) {
     const msg = `couldn't reach the lab — ${e.message}`;
     setBubble(msg);
@@ -998,6 +1036,14 @@ function setupSettings() {
   // save & close button
   $('settings-save')?.addEventListener('click', closeSettingsModal);
 
+  // reset-the-lab button — wipes field counts, then reloads so the
+  // room rebuilds clean (every spawned piece is destroyed too).
+  $('settings-reset-lab')?.addEventListener('click', () => {
+    if (!confirm('Reset the lab? Furniture grown from your past questions will go away.')) return;
+    clearFieldCounts();
+    location.reload();
+  });
+
   // "use recommendation"
   $('settings-apply-rec')?.addEventListener('click', () => {
     if (!_recommendation) return;
@@ -1175,6 +1221,14 @@ async function main() {
 
   STATUS('warming up…');
   scene = new LabScene(canvas);
+
+  // restore previously-earned furniture instantly (no spawn animation)
+  // so a returning visitor walks back into the room they built.
+  const earned = loadFieldCounts();
+  for (const field of Object.keys(earned)) {
+    const f = FIELD_FURNITURE[field];
+    if (f) scene.growFurniture?.(f.key, false);
+  }
 
   hydratePinboard();
   setupWelcome();

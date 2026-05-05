@@ -96,6 +96,13 @@ const SCENE_SCHEMA = {
       minItems: 0, maxItems: 3,
       items: { type: 'string' },
     },
+    field: {
+      type: 'string',
+      description: 'closest scientific field — drives which furniture grows in the room',
+      enum: ['astronomy', 'biology', 'chemistry', 'physics', 'climate',
+             'medicine', 'geology', 'food', 'psychology', 'tech',
+             'math', 'general'],
+    },
   },
 };
 
@@ -145,6 +152,13 @@ const SCENE_SCHEMA_NO_IMAGE = {
       description: '2-3 short kid-voice questions branching from this answer',
       minItems: 0, maxItems: 3,
       items: { type: 'string' },
+    },
+    field: {
+      type: 'string',
+      description: 'closest scientific field — drives which furniture grows in the room',
+      enum: ['astronomy', 'biology', 'chemistry', 'physics', 'climate',
+             'medicine', 'geology', 'food', 'psychology', 'tech',
+             'math', 'general'],
     },
   },
 };
