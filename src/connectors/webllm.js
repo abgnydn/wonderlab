@@ -26,15 +26,51 @@ async function loadModule() {
   return webllmMod;
 }
 
+// Pattern that flags a recoverable WebLLM cache failure — typically the
+// Cache.add() rejection on a redirected/opaque HF response. When we see
+// this we wipe the local WebLLM storage and retry once, so the visitor
+// never has to manually clear site data.
+const RECOVERABLE_CACHE_RE =
+  /Cache\.add|encountered a network error|opaqueredirect|redirected|Failed to fetch/i;
+
+// Wipe everything WebLLM might be storing on disk: browser Cache API
+// entries with "webllm"/"mlc" in the name, plus IndexedDB databases used
+// by the MLC runtime. Used on auto-recovery from a poisoned cache.
+async function clearWebllmStorage() {
+  if (typeof caches !== 'undefined') {
+    try {
+      const names = await caches.keys();
+      await Promise.all(
+        names
+          .filter(n => /webllm|mlc/i.test(n))
+          .map(n => caches.delete(n).catch(() => {}))
+      );
+    } catch {}
+  }
+  if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
+    try {
+      const dbs = await indexedDB.databases();
+      await Promise.all(dbs.map((db) => new Promise((resolve) => {
+        if (!db?.name || !/webllm|mlc|tvm|model/i.test(db.name)) return resolve();
+        const req = indexedDB.deleteDatabase(db.name);
+        req.onsuccess = req.onerror = req.onblocked = () => resolve();
+      })));
+    } catch {}
+  }
+  // also drop any in-memory engine reference so the next attempt rebuilds
+  engine = null;
+  engineModelId = null;
+}
+
 // (Re)create the engine for the requested model. If the same model is already
 // loaded we skip the work. progressCb receives { progress: 0..1, text } updates.
 //
-// Critical: we pass `useIndexedDBCache: true` so WebLLM stores model shards
-// in IndexedDB instead of the browser Cache API. The Cache API rejects
-// redirected and opaque responses (which HF's CDN chain produces), surfacing
-// as "Cache.add() encountered a network error" no matter how aggressively
-// we cleanse responses in the service worker. IndexedDB has no such
-// restriction — opaque-response bytes serialise fine into IDB.
+// We pass `useIndexedDBCache: true` so WebLLM stores model shards in IDB
+// instead of the browser Cache API — IDB doesn't have the redirect/opaque
+// response rejection rules that surface as "Cache.add() encountered a
+// network error". On the rare occasion that path still fails (e.g., legacy
+// Cache API entries from a previous version of this site), we auto-detect,
+// wipe the storage, and retry once invisibly.
 async function ensureEngine(modelId, progressCb) {
   if (engine && engineModelId === modelId) return engine;
   const wm = await loadModule();
@@ -53,11 +89,29 @@ async function ensureEngine(modelId, progressCb) {
     useIndexedDBCache: true,
   };
   const opts = { initProgressCallback, appConfig };
-  if (engine && typeof engine.reload === 'function') {
-    await engine.reload(modelId, opts);
-  } else {
-    engine = await wm.CreateMLCEngine(modelId, opts);
+
+  const tryLoad = async () => {
+    if (engine && typeof engine.reload === 'function') {
+      await engine.reload(modelId, opts);
+    } else {
+      engine = await wm.CreateMLCEngine(modelId, opts);
+    }
+  };
+
+  try {
+    await tryLoad();
+  } catch (err) {
+    const msg = String(err?.message || err);
+    if (!RECOVERABLE_CACHE_RE.test(msg)) throw err;
+    // poisoned local storage from a previous session — auto-recover
+    console.warn('[wonderlab] WebLLM cache poisoned, auto-recovering:', msg);
+    if (typeof progressCb === 'function') {
+      progressCb({ progress: 0, text: 'recovering — rebuilding model cache…' });
+    }
+    await clearWebllmStorage();
+    await tryLoad();    // one retry with clean storage; let any second failure surface
   }
+
   engineModelId = modelId;
   return engine;
 }

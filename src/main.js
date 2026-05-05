@@ -1408,7 +1408,22 @@ function setupShare() {
 // the model from disk cache and Iris's voice is ready in seconds.
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js', { scope: '/' })
-    .then(reg => console.log('[wonderlab] sw registered, scope:', reg.scope))
+    .then((reg) => {
+      console.log('[wonderlab] sw registered, scope:', reg.scope);
+      // Force a fresh check on every visit so an older SW with a stale
+      // allowlist can't linger. skipWaiting() inside sw.js then takes
+      // over without a manual unregister.
+      try { reg.update(); } catch {}
+      // If a new SW takes control (visitor's first load post-deploy),
+      // reload once so the page runs against the fresh SW. Guarded
+      // against the very first install to avoid an infinite reload.
+      let didReload = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (didReload) return;
+        didReload = true;
+        location.reload();
+      });
+    })
     .catch(err => console.warn('[wonderlab] sw registration failed:', err?.message || err));
 }
 
