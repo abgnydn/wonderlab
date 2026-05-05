@@ -167,6 +167,25 @@ function paintFollowUps(list) {
   strip.hidden = false;
 }
 
+// Decide whether a SceneSpec's illustration_svg is worth rendering.
+// "<svg></svg>" or "<svg><title>…</title></svg>" should NOT be — those
+// produce a blank whiteboard. We require both a parseable SVG root AND
+// at least 2 drawable shapes/text nodes inside.
+function isPaintableSvg(s) {
+  if (typeof s !== 'string' || !s.includes('<svg')) return false;
+  try {
+    const text = s.trim().replace(/^<\?xml[^?]*\?>/, '');
+    const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+    if (doc.querySelector('parsererror')) return false;
+    const root = doc.documentElement;
+    if (!root || root.nodeName.toLowerCase() !== 'svg') return false;
+    const drawable = root.querySelectorAll(
+      'path, rect, circle, ellipse, line, polyline, polygon, text, image'
+    );
+    return drawable.length >= 2;
+  } catch { return false; }
+}
+
 async function loadSpec(spec) {
   currentSpec = spec;
   paintSpec(spec);
@@ -174,8 +193,12 @@ async function loadSpec(spec) {
   //   • spec carries an SVG → rasterise it (the live "illustration" mode)
   //   • spec has no SVG     → text-card mode (notepad-style, used when image
   //     generation is off, or when we just want to show the question/welcome)
-  const hasSvg = typeof spec.illustration_svg === 'string'
-              && spec.illustration_svg.includes('<svg');
+  // hasSvg accepts an SVG only if it's both well-formed AND has enough
+  // drawable elements to actually paint something. Small models often
+  // return skeletal "<svg>...</svg>" with no shapes inside — that used
+  // to render as an empty board; now we fall through to the text-card
+  // so the visitor at least sees the answer.
+  const hasSvg = isPaintableSvg(spec.illustration_svg);
   STATUS(hasSvg ? 'drawing…' : 'on the whiteboard');
   try {
     if (hasSvg) {
