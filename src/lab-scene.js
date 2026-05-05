@@ -1627,26 +1627,32 @@ export class LabScene {
       );
       lid.position.y = 0.30;
       grp.add(lid);
-      // glass cylinder (thin shell)
+      // glass cylinder (thin shell). Very low opacity so the axolotl
+      // billboard inside reads through cleanly. Render order 0 so the
+      // billboard (renderOrder 2) always draws on top of it.
       const glass = new THREE.Mesh(
         new THREE.CylinderGeometry(0.11, 0.11, 0.30, 22, 1, true),
         new THREE.MeshStandardMaterial({
-          color: 0xffffff, transparent: true, opacity: 0.18,
+          color: 0xffffff, transparent: true, opacity: 0.16,
           roughness: 0.05, side: THREE.DoubleSide,
+          depthWrite: false,
         })
       );
       glass.position.y = 0.15;
+      glass.renderOrder = 0;
       grp.add(glass);
-      // water inside (slightly tinted, fills ~80% of jar)
-      const water = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.103, 0.103, 0.24, 22),
+      // a faint sky-blue tint at the bottom of the jar — reads as "water"
+      // without an opaque cylinder competing with the billboard for paint
+      const tint = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.102, 0.102, 0.06, 18),
         new THREE.MeshStandardMaterial({
-          color: 0xB5DCEB, transparent: true, opacity: 0.5,
-          roughness: 0.3,
+          color: 0xB5DCEB, transparent: true, opacity: 0.55,
+          roughness: 0.3, depthWrite: false,
         })
       );
-      water.position.y = 0.13;
-      grp.add(water);
+      tint.position.y = 0.04;
+      tint.renderOrder = 0;
+      grp.add(tint);
       // axolotl billboard — SVG rasterized to a canvas texture
       const axCanvas = document.createElement('canvas');
       axCanvas.width  = 160;
@@ -1661,6 +1667,9 @@ export class LabScene {
       });
       const axMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.128), axMat);
       axMesh.position.set(0, 0.13, 0.001);
+      // draw last so it sits on top of the glass + tint regardless of
+      // three.js's transparency sort order
+      axMesh.renderOrder = 2;
       grp.add(axMesh);
 
       const axSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="128" viewBox="0 0 160 128">
@@ -1704,7 +1713,7 @@ export class LabScene {
       _img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(axSvg);
 
       // tag for click + tooltip
-      [lid, glass, water, axMesh].forEach(m => { m.userData.kind = 'axolotl'; });
+      [lid, glass, tint, axMesh].forEach(m => { m.userData.kind = 'axolotl'; });
       // sit on the desk surface (y=1.04). a little forward of centre.
       grp.position.set(0.7, 1.04, 1.7);
       this.world.add(grp);
