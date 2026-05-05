@@ -82,11 +82,15 @@ async function ensureEngine(modelId, progressCb) {
       });
     }
   };
-  // appConfig with IndexedDB caching — clones the bundled prebuilt list
-  // so we don't accidentally narrow available models.
+  // appConfig with IndexedDB caching. The actual option name is
+  // `cacheBackend: "indexeddb"` (NOT `useIndexedDBCache` — that name
+  // was silently ignored by current WebLLM, so the Cache API path
+  // ran the whole time and HF's redirect chain kept tripping
+  // Cache.add). Clones the bundled prebuilt list so we don't narrow
+  // the available models.
   const appConfig = {
     ...(wm.prebuiltAppConfig || {}),
-    useIndexedDBCache: true,
+    cacheBackend: 'indexeddb',
   };
   const opts = { initProgressCallback, appConfig };
 
