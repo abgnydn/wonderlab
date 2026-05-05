@@ -28,6 +28,13 @@ async function loadModule() {
 
 // (Re)create the engine for the requested model. If the same model is already
 // loaded we skip the work. progressCb receives { progress: 0..1, text } updates.
+//
+// Critical: we pass `useIndexedDBCache: true` so WebLLM stores model shards
+// in IndexedDB instead of the browser Cache API. The Cache API rejects
+// redirected and opaque responses (which HF's CDN chain produces), surfacing
+// as "Cache.add() encountered a network error" no matter how aggressively
+// we cleanse responses in the service worker. IndexedDB has no such
+// restriction — opaque-response bytes serialise fine into IDB.
 async function ensureEngine(modelId, progressCb) {
   if (engine && engineModelId === modelId) return engine;
   const wm = await loadModule();
@@ -39,10 +46,17 @@ async function ensureEngine(modelId, progressCb) {
       });
     }
   };
+  // appConfig with IndexedDB caching — clones the bundled prebuilt list
+  // so we don't accidentally narrow available models.
+  const appConfig = {
+    ...(wm.prebuiltAppConfig || {}),
+    useIndexedDBCache: true,
+  };
+  const opts = { initProgressCallback, appConfig };
   if (engine && typeof engine.reload === 'function') {
-    await engine.reload(modelId, { initProgressCallback });
+    await engine.reload(modelId, opts);
   } else {
-    engine = await wm.CreateMLCEngine(modelId, { initProgressCallback });
+    engine = await wm.CreateMLCEngine(modelId, opts);
   }
   engineModelId = modelId;
   return engine;
