@@ -175,9 +175,17 @@
       gap: 0.8rem;
       flex-wrap: wrap;
     }
+    /* a wrapper so the sticky note can overhang the rounded picture
+       without being clipped by overflow:hidden on the picture itself. */
+    .hero__pic-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+    }
     .hero__pic {
       position: relative;
-      aspect-ratio: 1.05 / 1;
+      aspect-ratio: 1.6 / 1;
       border: 3px solid var(--ink);
       border-radius: 18px;
       overflow: hidden;
@@ -188,19 +196,27 @@
     .hero__pic svg { display: block; width: 100%; height: 100%; }
     .hero__sticky {
       position: absolute;
-      top: -22px; right: -18px;
-      width: 140px;
-      transform: rotate(8deg);
+      top: -28px; right: -8px;
+      width: 132px;
+      transform: rotate(7deg);
       background: var(--sun);
       border: 2px solid var(--ink);
       box-shadow: var(--shadow-md);
-      padding: 0.6rem 0.7rem;
+      padding: 0.65rem 0.7rem;
       font-family: 'Caveat', cursive;
       font-weight: 700;
-      font-size: 1.15rem;
+      font-size: 1.05rem;
       color: var(--ink);
-      line-height: 1.1;
+      line-height: 1.15;
       text-align: center;
+      z-index: 2;
+    }
+    .hero__sticky em {
+      display: block;
+      font-style: italic;
+      font-weight: 700;
+      color: var(--rose);
+      margin-top: 0.2rem;
     }
     .hero__sticky::before {
       content: '';
@@ -211,9 +227,11 @@
       background: rgba(124, 183, 208, 0.7);
       border-radius: 1px;
     }
+    @media (max-width: 600px) {
+      .hero__sticky { right: 6px; top: -22px; width: 116px; font-size: 0.95rem; padding: 0.55rem 0.6rem; }
+    }
     @media (max-width: 880px) {
       .hero { grid-template-columns: 1fr; padding: 2.5rem 1.1rem 2rem; }
-      .hero__pic { max-width: 460px; margin: 0 auto; }
     }
 
     /* ============ TRANSLATION ============ */
@@ -586,46 +604,69 @@
       </div>
     </div>
 
-    <div class="hero__pic">
-      <!-- inline cheese melt illustration — same style as iris's whiteboard -->
-      <svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
-        <rect width="800" height="500" fill="#FCEFD2"/>
-        <text x="400" y="50" font-family="Caveat" font-weight="700" font-size="34" fill="#2D2622" text-anchor="middle" transform="rotate(-1 400 50)">why does cheese melt?</text>
-        <!-- left: cold -->
-        <g transform="translate(160 290)">
-          <polygon points="0,90 220,90 110,-50" fill="#FFD16B" stroke="#2D2622" stroke-width="4" stroke-linejoin="round"/>
-          <circle cx="60"  cy="55" r="11" fill="#E66363" stroke="#2D2622" stroke-width="2.5"/>
-          <circle cx="110" cy="38" r="9"  fill="#7CB7D0" stroke="#2D2622" stroke-width="2.5"/>
-          <circle cx="160" cy="55" r="11" fill="#6FB05C" stroke="#2D2622" stroke-width="2.5"/>
-          <circle cx="85"  cy="75" r="8"  fill="#FF9B94" stroke="#2D2622" stroke-width="2.5"/>
-          <circle cx="135" cy="75" r="8"  fill="#FFB7A8" stroke="#2D2622" stroke-width="2.5"/>
-          <text x="110" y="138" font-family="Caveat" font-weight="700" font-size="26" fill="#2D2622" text-anchor="middle">cold — pieces hold tight</text>
-        </g>
-        <!-- arrow -->
-        <g transform="translate(420 360)">
-          <text x="60" y="-22" font-family="Caveat" font-weight="700" font-size="36" fill="#E66363" text-anchor="middle" transform="rotate(-3 60 -22)">heat ↑</text>
-          <line x1="0" y1="0" x2="115" y2="0" stroke="#2D2622" stroke-width="5" marker-end="url(#a)"/>
-        </g>
-        <defs>
-          <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#2D2622"/>
-          </marker>
-        </defs>
-        <!-- right: warm -->
-        <g transform="translate(580 290)">
-          <path d="M 0 60 Q -25 100 15 110 Q 80 116 135 100 Q 200 110 240 95 Q 280 80 240 50 Q 200 22 130 30 Q 55 25 15 45 Z"
-                fill="#FFD16B" stroke="#2D2622" stroke-width="4" stroke-linejoin="round"/>
-          <circle cx="40"  cy="78" r="11" fill="#E66363" stroke="#2D2622" stroke-width="2.5"/>
-          <circle cx="95"  cy="58" r="9"  fill="#7CB7D0" stroke="#2D2622" stroke-width="2.5"/>
-          <circle cx="155" cy="80" r="11" fill="#6FB05C" stroke="#2D2622" stroke-width="2.5"/>
-          <circle cx="200" cy="60" r="8"  fill="#FF9B94" stroke="#2D2622" stroke-width="2.5"/>
-          <circle cx="225" cy="85" r="8"  fill="#FFB7A8" stroke="#2D2622" stroke-width="2.5"/>
-          <text x="120" y="138" font-family="Caveat" font-weight="700" font-size="26" fill="#2D2622" text-anchor="middle">warm — pieces slip past</text>
-        </g>
-      </svg>
+    <div class="hero__pic-wrap">
+      <div class="hero__pic">
+        <!-- inline cheese melt illustration — same style as iris's whiteboard.
+             ViewBox 800×500. Three groups: cold wedge (left), heat arrow,
+             warm blob (right). All anchors are centered around their group
+             center so nothing clips against the viewBox edges. -->
+        <svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="heat-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#2D2622"/>
+            </marker>
+          </defs>
+
+          <rect width="800" height="500" fill="#FCEFD2"/>
+
+          <!-- title -->
+          <text x="400" y="58" font-family="Caveat" font-weight="700" font-size="34"
+                fill="#2D2622" text-anchor="middle" transform="rotate(-1 400 58)">why does cheese melt?</text>
+
+          <!-- LEFT: cold wedge — centered around (180, 280) -->
+          <g transform="translate(180 280)">
+            <polygon points="-110,60 110,60 0,-80"
+                     fill="#FFD16B" stroke="#2D2622" stroke-width="4" stroke-linejoin="round"/>
+            <circle cx="-50" cy="25" r="11" fill="#E66363" stroke="#2D2622" stroke-width="2.5"/>
+            <circle cx="0"   cy="8"  r="9"  fill="#7CB7D0" stroke="#2D2622" stroke-width="2.5"/>
+            <circle cx="50"  cy="25" r="11" fill="#6FB05C" stroke="#2D2622" stroke-width="2.5"/>
+            <circle cx="-25" cy="45" r="8"  fill="#FF9B94" stroke="#2D2622" stroke-width="2.5"/>
+            <circle cx="25"  cy="45" r="8"  fill="#FFB7A8" stroke="#2D2622" stroke-width="2.5"/>
+            <text x="0" y="108" font-family="Caveat" font-weight="700" font-size="26"
+                  fill="#2D2622" text-anchor="middle">cold — pieces hold tight</text>
+          </g>
+
+          <!-- arrow + heat label, centered around x=400 -->
+          <g transform="translate(340 290)">
+            <text x="60" y="-22" font-family="Caveat" font-weight="700" font-size="34"
+                  fill="#E66363" text-anchor="middle" transform="rotate(-3 60 -22)">heat ↑</text>
+            <line x1="0" y1="0" x2="120" y2="0" stroke="#2D2622" stroke-width="5"
+                  marker-end="url(#heat-arrow)"/>
+          </g>
+
+          <!-- RIGHT: warm blob — centered around (610, 290), max half-width ≈ 130 -->
+          <g transform="translate(610 290)">
+            <path d="M -110 0
+                     Q -130 40  -90 50
+                     Q -25 60   30 45
+                     Q 90 55    130 38
+                     Q 165 22   125 -12
+                     Q 90 -38   25 -32
+                     Q -45 -38  -90 -16 Z"
+                  fill="#FFD16B" stroke="#2D2622" stroke-width="4" stroke-linejoin="round"/>
+            <circle cx="-65" cy="22" r="11" fill="#E66363" stroke="#2D2622" stroke-width="2.5"/>
+            <circle cx="-15" cy="0"  r="9"  fill="#7CB7D0" stroke="#2D2622" stroke-width="2.5"/>
+            <circle cx="35"  cy="22" r="11" fill="#6FB05C" stroke="#2D2622" stroke-width="2.5"/>
+            <circle cx="80"  cy="0"  r="8"  fill="#FF9B94" stroke="#2D2622" stroke-width="2.5"/>
+            <circle cx="105" cy="25" r="8"  fill="#FFB7A8" stroke="#2D2622" stroke-width="2.5"/>
+            <text x="0" y="108" font-family="Caveat" font-weight="700" font-size="26"
+                  fill="#2D2622" text-anchor="middle">warm — pieces slip past</text>
+          </g>
+        </svg>
+      </div>
 
       <div class="hero__sticky">
-        researchers say:<br/>
+        researchers say
         <em>protein-fat<br/>thermal disordering</em>
       </div>
     </div>
