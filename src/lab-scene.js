@@ -198,13 +198,45 @@ export class LabScene {
     }
 
     // Try the live-draw path first; fall back to one-shot on any failure.
+    let usedFallback = false;
     try {
       await this._renderSvgStrokeByStroke(svgText);
       console.log('[wonderlab] stroke-by-stroke OK');
     } catch (e) {
       console.info('[wonderlab] live-draw fell back to one-shot:', e?.message || e);
       await this._renderSvgOneShot(svgText);
+      usedFallback = true;
       console.log('[wonderlab] one-shot OK');
+    }
+
+    // Diagnostic — sample a few canvas pixels to confirm there are actually
+    // non-cream pixels on the board. If the canvas is uniform cream after
+    // "successful" rendering, we have an invisible-paint bug and should
+    // re-run via one-shot which doesn't use the offscreen-mounted SVG trick.
+    try {
+      const ctx = this._svgCanvas.getContext('2d');
+      const W = this._svgCanvas.width, H = this._svgCanvas.height;
+      const samples = [
+        ctx.getImageData(W * 0.25, H * 0.5, 1, 1).data,
+        ctx.getImageData(W * 0.5,  H * 0.5, 1, 1).data,
+        ctx.getImageData(W * 0.75, H * 0.5, 1, 1).data,
+        ctx.getImageData(W * 0.5,  H * 0.15, 1, 1).data,
+      ];
+      const colors = samples.map(p => `rgb(${p[0]},${p[1]},${p[2]})`);
+      const unique = [...new Set(colors)];
+      console.log('[wonderlab] canvas sample:', colors.join(' · '));
+      // If every sample is the cream background (or all the same color),
+      // nothing visible got painted. Repaint with the synchronous one-shot
+      // path which avoids the offscreen-mount + opacity dance.
+      const cream = colors.every(c => /^rgb\(25[0-5],2[34][0-9],2[01][0-9]\)$/.test(c) || c === colors[0]);
+      if (unique.length === 1 && !usedFallback) {
+        console.warn('[wonderlab] canvas appears blank after stroke-by-stroke — forcing one-shot repaint');
+        await this._renderSvgOneShot(svgText);
+        const after = ctx.getImageData(W * 0.5, H * 0.5, 1, 1).data;
+        console.log('[wonderlab] post-fallback sample:', `rgb(${after[0]},${after[1]},${after[2]})`);
+      }
+    } catch (e) {
+      console.warn('[wonderlab] canvas sample check failed (CORS?):', e?.message || e);
     }
   }
 
@@ -259,13 +291,16 @@ export class LabScene {
     const svgEl = doc.documentElement;
     if (!svgEl || svgEl.nodeName.toLowerCase() !== 'svg') throw new Error('no <svg> root');
 
-    // Mount offscreen so getTotalLength() works
+    // Mount offscreen so getTotalLength() works.
+    // CRITICAL: do NOT set opacity:0 on the outer SVG — that style is
+    // serialized along with the element and applied when we render the
+    // offscreen SVG via Image, making the resulting raster fully
+    // transparent. Position alone takes it out of the viewport.
     svgEl.setAttribute('width',  String(W));
     svgEl.setAttribute('height', String(H));
     svgEl.style.position  = 'fixed';
     svgEl.style.left      = '-99999px';
     svgEl.style.top       = '0';
-    svgEl.style.opacity   = '0';
     svgEl.style.pointerEvents = 'none';
     document.body.appendChild(svgEl);
 
