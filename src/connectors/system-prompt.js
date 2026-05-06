@@ -17,7 +17,12 @@ let inflight = null;
 export function getSystemPrompt() {
   if (cached) return Promise.resolve(cached);
   if (inflight) return inflight;
-  inflight = fetch(PROMPT_URL, { cache: 'force-cache' })
+  // We used to use cache:'force-cache' here, but that caused old
+  // prompts to stick around for visitors who'd loaded the site once
+  // and never hard-refreshed. Now we use 'no-cache' (sends a
+  // conditional request: server can 304 if nothing changed, full
+  // body otherwise), so prompt updates land within one normal reload.
+  inflight = fetch(PROMPT_URL, { cache: 'no-cache' })
     .then(async (res) => {
       if (!res.ok) throw new Error(`couldn't load system prompt (HTTP ${res.status})`);
       cached = await res.text();

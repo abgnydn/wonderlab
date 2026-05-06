@@ -14,9 +14,12 @@
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
 
-# system prompt — fetched once per session by every connector, fine to cache
+# system prompt — fetched once per session by every connector. Short-cache
+# with must-revalidate so prompt updates roll out within one reload, not
+# 24h. The browser sends If-Modified-Since on every fetch; Cloudflare
+# returns 304 when nothing changed, so this is cheap.
 /system-prompt.txt
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=0, must-revalidate
 
 # JS modules — no fingerprinting yet (could add a build step), so short cache
 /src/*

@@ -27,7 +27,7 @@ import {
   getActiveConnector, ask as connectorAsk, resolveDrawIllustrations,
 } from './connectors/index.js';
 import { LANGUAGES, resolveLanguage } from './connectors/system-prompt.js';
-import { renderTemplate, isValidTemplate } from './templates/index.js';
+import { renderTemplate, isValidTemplate, buildFallbackTemplate } from './templates/index.js';
 import {
   detectCapabilities, recommend, describeCapabilities, WEBLLM_MODELS,
 } from './device-detect.js';
@@ -60,25 +60,31 @@ function asSceneSpec(reply) {
   const customSvg = s.scene?.illustration_svg || '';
   const template  = s.scene?.template || null;
 
-  // Try the model's SVG first if it looks well-formed enough; otherwise
-  // build from the template. We do the SVG check up front so the
-  // template auto-fills in when the model returned an empty / garbled
-  // <svg/> shell.
+  // Picture resolution order:
+  //   1. paintable custom SVG (sophisticated models, richest)
+  //   2. model-supplied template (any model, always works)
+  //   3. synthesized fallback template (when model gave us neither —
+  //      the safety net of safety nets)
+  //
+  // The fallback uses the question + answer + field to pick shapes,
+  // colors, and a reasonable left/right state pair. Even Llama-3.2-1B
+  // that ignored both picture fields ends up with a real picture on
+  // the whiteboard.
   let illustration = '';
   if (customSvg && isPaintableSvg(customSvg)) {
     illustration = customSvg;
-  } else if (template && isValidTemplate(template)) {
-    // attach the title to the template if missing — the SVG title bar
-    // reads from this field
-    const t = { ...template };
-    if (!t.title && s.scene?.question) t.title = s.scene.question;
-    const built = renderTemplate(t);
+  } else {
+    const t = (template && isValidTemplate(template))
+      ? template
+      : buildFallbackTemplate({
+          question: s.scene?.question,
+          answer:   s.answer?.kid || s.reply || '',
+          field:    s.field || 'general',
+        });
+    const filled = { ...t };
+    if (!filled.title && s.scene?.question) filled.title = s.scene.question;
+    const built = renderTemplate(filled);
     if (built) illustration = built;
-  } else if (customSvg) {
-    // model wrote SVG but it didn't pass the paintable gate — keep it
-    // around so the loadSpec layer can decide (it'll fall through to
-    // text-card)
-    illustration = customSvg;
   }
 
   return {

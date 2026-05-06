@@ -95,3 +95,77 @@ export function isValidTemplate(template) {
   }
   return false;
 }
+
+// Synthesize a template from whatever we have when the model returns
+// neither a template nor a paintable SVG. This is the absolute floor:
+// even Llama-3.2-1B that ignores both picture fields will produce a
+// readable picture, because we build one from the question + field
+// + answer text it DID produce.
+//
+// Heuristics:
+//   • detect "before/after" hints in the question/answer
+//   • pick a shape that fits the field (biology→leaf, physics→sphere…)
+//   • fall back to wedge→blob (the cheese-melt archetype) for "general"
+const FIELD_SHAPES = {
+  food:       { left: 'wedge',  right: 'blob'   },
+  chemistry:  { left: 'sphere', right: 'blob'   },
+  biology:    { left: 'leaf',   right: 'leaf'   },
+  medicine:   { left: 'drop',   right: 'drop'   },
+  physics:    { left: 'sphere', right: 'sphere' },
+  astronomy:  { left: 'sphere', right: 'sphere' },
+  geology:    { left: 'box',    right: 'box'    },
+  climate:    { left: 'drop',   right: 'drop'   },
+  psychology: { left: 'sphere', right: 'sphere' },
+  tech:       { left: 'box',    right: 'box'    },
+  math:       { left: 'box',    right: 'box'    },
+  general:    { left: 'wedge',  right: 'blob'   },
+};
+
+const FIELD_COLORS = {
+  food: 'yellow', chemistry: 'green', biology: 'green', medicine: 'pink',
+  physics: 'sky', astronomy: 'violet', geology: 'brown', climate: 'sky',
+  psychology: 'pink', tech: 'sky', math: 'violet', general: 'yellow',
+};
+
+// Look at the question text for "X vs Y" / "before/after" / state pairs
+// and try to pull a left + right keyword. Returns { left, right } or null.
+function findStatePair(question, answer) {
+  const text = `${question || ''} ${answer || ''}`.toLowerCase();
+  const pairs = [
+    ['cold', 'warm'], ['cold', 'hot'], ['cool', 'warm'],
+    ['raw', 'cooked'], ['liquid', 'solid'], ['solid', 'liquid'],
+    ['young', 'old'], ['off', 'on'], ['sleeping', 'awake'],
+    ['empty', 'full'], ['closed', 'open'], ['quiet', 'loud'],
+    ['dark', 'bright'], ['small', 'big'], ['thin', 'thick'],
+    ['weak', 'strong'], ['slow', 'fast'], ['flat', 'round'],
+    ['dry', 'wet'], ['day', 'night'],
+  ];
+  for (const [a, b] of pairs) {
+    if (text.includes(a) && text.includes(b)) return { left: a, right: b };
+  }
+  return null;
+}
+
+export function buildFallbackTemplate({ question, answer, field }) {
+  const f = (field || 'general').toLowerCase();
+  const shapes = FIELD_SHAPES[f] || FIELD_SHAPES.general;
+  const color  = FIELD_COLORS[f] || FIELD_COLORS.general;
+  const states = findStatePair(question, answer);
+  return {
+    kind: 'before-after',
+    title: (question || '').slice(0, 60),
+    left: {
+      shape: shapes.left,
+      color: color,
+      label: states ? states.left  : 'before',
+      dots:  4,
+    },
+    right: {
+      shape: shapes.right,
+      color: states ? color : (color === 'yellow' ? 'orange' : color),
+      label: states ? states.right : 'after',
+      dots:  4,
+    },
+    arrow_label: '→',
+  };
+}
