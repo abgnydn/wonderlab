@@ -27,7 +27,10 @@ import {
   getActiveConnector, ask as connectorAsk, resolveDrawIllustrations,
 } from './connectors/index.js';
 import { LANGUAGES, resolveLanguage } from './connectors/system-prompt.js';
-import { renderTemplate, isValidTemplate, buildFallbackTemplate } from './templates/index.js';
+import {
+  renderTemplate, isValidTemplate, buildFallbackTemplate,
+  renderDraw, isValidDraw,
+} from './templates/index.js';
 import {
   detectCapabilities, recommend, describeCapabilities, WEBLLM_MODELS,
 } from './device-detect.js';
@@ -59,6 +62,7 @@ function asSceneSpec(reply) {
   // built ourselves OR an SVG string the model wrote.
   const customSvg = s.scene?.illustration_svg || '';
   const template  = s.scene?.template || null;
+  const drawCmds  = Array.isArray(s.scene?.draw) ? s.scene.draw : null;
 
   // Diagnostic — opens the black box. Inspect once with DevTools open
   // to see exactly what the model returned, what we picked, and why
@@ -66,10 +70,12 @@ function asSceneSpec(reply) {
   console.groupCollapsed('[wonderlab] spec received from model');
   console.log('raw spec:', s);
   console.log('scene keys:', Object.keys(s.scene || {}));
-  console.log('has illustration_svg:', !!customSvg, '(length:', customSvg.length, ')');
+  console.log('has draw[]:', !!drawCmds, drawCmds ? `(${drawCmds.length} commands)` : '');
   console.log('has template:', !!template, template ? `(kind: ${template.kind || template.type})` : '');
-  if (customSvg) console.log('illustration_svg preview:', customSvg.slice(0, 200));
+  console.log('has illustration_svg:', !!customSvg, '(length:', customSvg.length, ')');
+  if (drawCmds)  console.log('draw[]:', drawCmds);
   if (template)  console.log('template:', template);
+  if (customSvg) console.log('illustration_svg preview:', customSvg.slice(0, 200));
   console.groupEnd();
 
   // Picture resolution order:
@@ -82,12 +88,29 @@ function asSceneSpec(reply) {
   // colors, and a reasonable left/right state pair. Even Llama-3.2-1B
   // that ignored both picture fields ends up with a real picture on
   // the whiteboard.
+  // Picture resolution order, most-flexible to most-rigid:
+  //   1. scene.draw — array of drawing commands. The model places shapes
+  //      anywhere on the canvas. This is the new primary path: every
+  //      question gets a different picture, no SVG syntax for the model
+  //      to break, no template box to escape from.
+  //   2. scene.illustration_svg — custom SVG markup for capable models
+  //      that want richer detail. Kept as an escape hatch.
+  //   3. scene.template — the rigid before-after slot-fill. Reliable but
+  //      every picture looks similar; we lean on this only when the model
+  //      didn't fill draw[].
+  //   4. synthesized fallback template — when none of the above arrived.
+  //      The whiteboard is never blank.
   let illustration = '';
   let pictureSource = 'none';
-  if (customSvg && isPaintableSvg(customSvg)) {
+  if (drawCmds && isValidDraw(drawCmds)) {
+    illustration = renderDraw(drawCmds, { title: s.scene?.question || '' }) || '';
+    if (illustration) pictureSource = 'model-draw';
+  }
+  if (!illustration && customSvg && isPaintableSvg(customSvg)) {
     illustration = customSvg;
     pictureSource = 'custom-svg';
-  } else {
+  }
+  if (!illustration) {
     const useModelTemplate = template && isValidTemplate(template);
     const t = useModelTemplate
       ? template

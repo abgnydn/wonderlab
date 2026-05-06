@@ -79,7 +79,38 @@ const SCENE_SCHEMA = {
       required: ['question'],
       properties: {
         question: { type: 'string' },
-        // Preferred picture path: model fills slots, we render. Always works.
+        // PRIMARY picture path: array of drawing commands. The model
+        // places shapes anywhere on the 800×500 canvas. Works on every
+        // model because there's no SVG syntax — just structured fields.
+        draw: {
+          type: 'array',
+          description: 'Drawing commands. Compose 4-12 shapes/labels to illustrate the answer. Coordinates are 0..800 wide, 0..500 tall.',
+          items: {
+            type: 'object',
+            required: ['k'],
+            properties: {
+              k: {
+                type: 'string',
+                enum: [
+                  'title', 'text', 'circle', 'rect', 'line', 'arrow',
+                  'wedge', 'blob', 'sphere', 'ring', 'box', 'drop',
+                  'leaf', 'star', 'chain',
+                ],
+              },
+              x:  { type: 'integer' }, y:  { type: 'integer' },
+              x1: { type: 'integer' }, y1: { type: 'integer' },
+              x2: { type: 'integer' }, y2: { type: 'integer' },
+              r:  { type: 'integer' },
+              w:  { type: 'integer' }, h:  { type: 'integer' },
+              s:  { type: 'string' }, label: { type: 'string' }, text: { type: 'string' },
+              color: { type: 'string', enum: ['yellow', 'red', 'blue', 'green', 'orange', 'pink', 'sky', 'brown', 'violet', 'cream'] },
+              size: { type: 'string', enum: ['title', 'big', 'label', 'caption'] },
+              dots: { type: 'integer', minimum: 0, maximum: 6 },
+            },
+          },
+        },
+        // Fallback path: pre-defined two-column layout. Picks shapes/colors,
+        // rigid layout. Use when draw[] doesn't fit.
         template: {
           type: 'object',
           description: 'Pick a layout + fill slots. Always renders correctly. Prefer this over illustration_svg.',

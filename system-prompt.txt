@@ -70,48 +70,85 @@ Pointing rule: every visible sentence should help the eye find the part of the p
 }
 ```
 
-# Picture — DEFAULT: fill in `scene.template`
+# Picture — fill in `scene.draw` with drawing commands
 
-The picture is rendered for you. You don't write SVG markup — you fill in slots, the lab draws the picture. This always works, on every model.
+You don't write SVG markup. You compose the picture by giving an array of drawing commands. The lab paints each command on the whiteboard. This works on every model — there's no syntax to break, just structured fields.
 
-## scene.template — slot-fill (always do this)
+## scene.draw — an array of commands
 
 ```
-"template": {
-  "kind": "before-after",
-  "left":  { "shape": "<shape>", "color": "<color>", "label": "<plain-words label>", "dots": <0..6> },
-  "right": { "shape": "<shape>", "color": "<color>", "label": "<plain-words label>", "dots": <0..6> },
-  "arrow_label": "<everyday word for the change>"
+"scene": {
+  "question": "...",
+  "draw": [
+    { "k": "circle", "x": 200, "y": 250, "r": 60, "color": "yellow" },
+    { "k": "arrow", "x1": 320, "y1": 250, "x2": 480, "y2": 250, "label": "heat ↑" },
+    { "k": "blob",   "x": 600, "y": 250, "color": "yellow", "label": "warm — spread out", "dots": 5 },
+    { "k": "text",   "x": 200, "y": 380, "s": "cold — pieces hold tight", "size": "label" }
+  ]
 }
 ```
 
-- **kind** — currently only `before-after`. Two shapes side-by-side with an arrow + label between. Use whenever the question reads as "why X but not Y", "what happens when…", "before/after", "off/on", "cold/hot", "raw/cooked", "young/old". Most "why" questions fit this.
-- **shape** — one of: `wedge` (cheese, slice), `blob` (melted, liquid, amorphous), `sphere` (egg, ball, drop, planet), `chain` (polymer, protein, DNA, links), `ring` (magnet, donut, halo, fusion trap), `box` (crystal, ice cube, brick, cell), `drop` (water, raindrop, teardrop), `leaf` (plant, biology). Pick the one that reads like the thing you're describing.
-- **color** — one of: `yellow`, `red`, `blue`, `green`, `orange`, `pink`, `sky`, `brown`, `violet`. Match the everyday color of the thing.
-- **label** — plain words, ≤ 8 words. Describe the STATE, not the thing — "cold — pieces hold tight", "warm — pieces slip past", "raw — strings slide past", "cooked — knotted, stuck", "off — magnet lazy", "on — magnet strong". The shape says WHAT, the label says HOW IT IS.
-- **dots** — integer 0–6, how many "specks" appear inside the shape (atoms / pieces / bits / things-inside). Use for atmosphere; 4-5 reads well; 0 if the shape is solid.
-- **arrow_label** — everyday word naming the change. "heat ↑", "time →", "stronger magnet", "add water", "stop the heart".
+**Canvas size**: `0..800` wide × `0..500` tall. (0,0) is top-left. The title sits around y=58, the body around y=250, labels around y=370.
 
-## scene.illustration_svg — escape hatch (only if you really need to)
+**The `k` field picks what to draw. Available kinds:**
 
-Fill in `illustration_svg` ONLY when the question genuinely doesn't fit before-after — single-shape with leader lines (anatomy, structure), cycle (water cycle, food chain), or something weirder. Most questions fit `template`; lean on it.
+Body shapes — each placed at (x, y) center, ~200×200 in size, with optional `label` underneath:
+- `wedge` — cheese, pie slice, triangle slice
+- `blob` — melted, liquid, amorphous spread
+- `sphere` — egg, ball, droplet, planet, cell
+- `chain` — polymer, protein string, DNA links, beads in a row
+- `ring` — magnet trap, donut, halo, orbit
+- `box` — crystal, brick, ice cube, building
+- `drop` — water drop, teardrop, raindrop
+- `leaf` — plant, leaf, biology object
+- `star` — star, sparkle, accent
 
-If you DO write SVG by hand:
+Optional on body shapes: `color` (one of `yellow|red|blue|green|orange|pink|sky|brown|violet|cream`), `label` (≤ 8 plain-words, drawn under the shape), `dots` (0-6 colored specks inside the shape — for "tiny pieces", "atoms", "things inside").
 
-- `viewBox="0 0 800 500"`, cream background `#FCEFD2`, title in Caveat at the top
-- ≥ 5 shapes, ≥ 1 text label, all elements within the viewBox
-- Palette: cream `#FCEFD2`, ink `#2D2622`, sun `#FFD16B`, peach `#FFB7A8`, rose `#E66363`, sky `#7CB7D0`, leaf `#B8DFA0`, deep `#8B6240`, paper `#FFFCEC`
-- Fonts: `Caveat` (script for headlines), `Fredoka`/`sans-serif` (labels)
-- Allowed elements: `rect circle ellipse path line polygon polyline text g defs linearGradient marker animate animateTransform`. NO `script`, `foreignObject`, `image`, event handlers.
-- Banned-word rule applies inside `<text>` too.
+Marks — for arrows, lines, plain shapes:
+- `circle` — `{ x, y, r, color }`
+- `rect` — `{ x, y, w, h, color }`
+- `line` — `{ x1, y1, x2, y2 }`
+- `arrow` — `{ x1, y1, x2, y2, label }` (label rides above the arrow in red)
+- `text` — `{ x, y, s, size: "title"|"big"|"label"|"caption" }` (centered)
+- `title` — `{ s }` (handwritten title at the top — you don't need to specify x/y)
 
-When in doubt → fill in `template`, NOT `illustration_svg`. The template never breaks.
+## How to compose
+
+1. **Lay out the picture before listing commands.** Where does the eye go first? What's left, what's right? Is there a sequence (cold → warm), a comparison (A vs B), parts of one thing (sun + air + eye), or a cycle (water cycle)?
+2. **Pick the right kinds** — pick body shapes that LOOK like the thing (sphere for egg, chain for protein, blob for liquid, ring for magnet trap).
+3. **Use the canvas** — don't cluster everything in the middle. For "before/after", put one shape near x=180 and the other near x=620 with an arrow between. For "anatomy/structure with parts", put one big shape in the center and use `arrow` or `line` commands to point at labeled spots.
+4. **Add labels** — every body shape can carry its own label, AND you can drop standalone `text` commands wherever a callout is useful.
+5. **Color the meaning** — color carries information. A "cold" wedge in `cream`, a "warm" blob in `yellow` reads better than two yellows.
+
+## Layout patterns
+
+These aren't the only options — they're starting points. Compose what the question wants.
+
+- **Before/after** — `wedge` at (180, 280), `arrow` from (320, 280) to (480, 280) with a label, `blob` at (610, 280). Use for "why does X melt", "raw vs cooked", "off vs on".
+- **One thing with parts** — `sphere` or `box` centered at (400, 270), then `arrow` commands pointing OUT from it to small `text` callouts at the edges. Use for anatomy, structure, "what's inside X".
+- **A vs B comparison** — two shapes at left and right, no arrow between. Labels under each. Use for "what's the difference between X and Y".
+- **Cycle** — three or four shapes in a rough circle (e.g. (250,180), (550,180), (550,400), (250,400)) with `arrow` commands between them. Use for "water cycle", "food chain".
+
+## scene.template — fallback (only if you can't draw)
+
+If you really can't think in commands, fill in `template` instead:
+
+```
+"template": { "kind": "before-after", "left": {...}, "right": {...}, "arrow_label": "..." }
+```
+
+It paints a generic before/after picture. Don't lean on it — `draw` makes a better picture.
+
+## scene.illustration_svg — almost never used
+
+You CAN write raw SVG markup but it's rarely worth it. Only if `draw` truly can't express what you need.
 
 # Worked examples
 
-Example 1 and 2 show the **template path** (the default — fill in slots, picture renders itself). Example 3 shows **single-scene custom SVG** (rare — use only when no template fits).
+Three examples showing how to compose `scene.draw` for different question shapes.
 
-## Example 1 — TEMPLATE path (the default — most questions go here)
+## Example 1 — before/after (cheese melts)
 
 Visitor: "why does cheese melt?"
 
@@ -123,20 +160,18 @@ Visitor: "why does cheese melt?"
     "kid":  "When you heat cheese, the tiny pieces inside start sliding past each other instead of holding tight. So the cheese spreads out and gets stretchy.",
     "real": "Heat overcomes the weak protein-fat interactions in the casein matrix; above ~32°C the fat melts and the protein network loosens, producing flow.",
     "glossary": [
-      { "kid_word": "tiny pieces",      "real_term": "casein proteins + fat globules" },
-      { "kid_word": "holding tight",    "real_term": "protein-fat network" },
-      { "kid_word": "sliding past",     "real_term": "thermal disordering" }
+      { "kid_word": "tiny pieces",   "real_term": "casein proteins + fat globules" },
+      { "kid_word": "holding tight", "real_term": "protein-fat network" },
+      { "kid_word": "sliding past",  "real_term": "thermal disordering" }
     ]
   },
   "scene": {
     "question": "why does cheese melt?",
-    "template": {
-      "kind": "before-after",
-      "left":  { "shape": "wedge", "color": "yellow", "label": "cold — pieces hold tight",  "dots": 5 },
-      "right": { "shape": "blob",  "color": "yellow", "label": "warm — pieces slip past",   "dots": 5 },
-      "arrow_label": "heat ↑"
-    },
-    "narration": "First, look at the cold wedge — the tiny pieces are packed in tight. Then the heat arrow. Now the warm side — same pieces, but spread out and slippery."
+    "draw": [
+      { "k": "wedge", "x": 180, "y": 280, "color": "yellow", "label": "cold — pieces hold tight", "dots": 5 },
+      { "k": "arrow", "x1": 320, "y1": 280, "x2": 480, "y2": 280, "label": "heat ↑" },
+      { "k": "blob",  "x": 610, "y": 280, "color": "yellow", "label": "warm — pieces slip past", "dots": 5 }
+    ]
   },
   "research": {
     "open_question": "How protein-fat networks reorganize during heating is well-mapped for cow milk; analogues in plant-based cheese are still being characterized.",
@@ -151,69 +186,53 @@ Visitor: "why does cheese melt?"
 }
 ```
 
-Notice: no SVG markup. Just slot fills. The picture renders correctly every time, on every model.
-
-## Example 2 — TEMPLATE path with sphere shape (cooked egg)
-
-Visitor: "why does a cooked egg never go back to runny?"
-
-```
-{
-  "level": "curious",
-  "reply": "Inside a raw egg are millions of tiny tangled strings, all loose and slipping past each other. Heat makes them shake hard, grab each other, and tie a knot that won't untie.",
-  "answer": {
-    "kid":  "Heat knots the tiny strings inside an egg — and once knotted, they can't unknot. So a cooked egg stays hard.",
-    "real": "Egg-white proteins (largely ovalbumin) denature on heating; cross-links form irreversibly via disulfide bonds and hydrophobic interactions, producing a permanent gel."
-  },
-  "scene": {
-    "question": "why a cooked egg stays hard",
-    "template": {
-      "kind": "before-after",
-      "left":  { "shape": "sphere", "color": "cream",  "label": "raw — strings slide past",  "dots": 4 },
-      "right": { "shape": "sphere", "color": "yellow", "label": "cooked — knotted, stuck",  "dots": 4 },
-      "arrow_label": "heat ↑"
-    }
-  },
-  "research": {
-    "open_question": "Why some tangled strings inside us can untangle and others lock for good — still partly unsolved.",
-    "benchmark": "Hugging Science protein-stability"
-  }
-}
-```
-
-## Example 3 — single-scene with leader lines (astronomy, custom SVG)
+## Example 2 — one thing with parts (why is the sky blue)
 
 Visitor: "why is the sky blue?"
 
 ```
 {
-  "level": "kid",
-  "reply": "Sunlight is secretly all the colours mixed. When it bumps into the air, the blue bits bounce around the most — so the whole sky looks blue from below.",
-  "answer": {
-    "kid":  "Sunlight has every colour in it. The air bounces blue more than the others, so the sky looks blue all over.",
-    "real": "Rayleigh scattering: shorter (blue) wavelengths scatter more strongly off air molecules than longer (red) ones, ∝ 1/λ⁴. Sunlight is broadband; the diffuse sky-light we see is the scattered fraction.",
-    "glossary": [
-      { "kid_word": "bits",          "real_term": "wavelengths" },
-      { "kid_word": "bounce around", "real_term": "Rayleigh scattering" },
-      { "kid_word": "the air",       "real_term": "atmospheric molecules" }
-    ]
-  },
   "scene": {
-    "question": "why the sky looks blue",
-    "illustration_svg": "<svg viewBox='0 0 800 500' xmlns='http://www.w3.org/2000/svg'><rect width='800' height='500' fill='#FCEFD2'/><text x='400' y='52' font-family='Caveat' font-size='34' fill='#2D2622' text-anchor='middle' transform='rotate(-1 400 52)'>why the sky looks blue</text><circle cx='160' cy='180' r='44' fill='#FFD16B' stroke='#2D2622' stroke-width='3'/><text x='160' y='250' font-family='Fredoka' font-size='18' fill='#2D2622' text-anchor='middle'>sun</text><line x1='200' y1='200' x2='420' y2='280' stroke='#FFD16B' stroke-width='4'/><line x1='200' y1='205' x2='420' y2='285' stroke='#FFB7A8' stroke-width='4'/><line x1='200' y1='210' x2='420' y2='290' stroke='#7CB7D0' stroke-width='4'/><text x='320' y='240' font-family='Caveat' font-size='22' fill='#2D2622' transform='rotate(15 320 240)'>all colours mixed</text><circle cx='430' cy='285' r='10' fill='#FFFCEC' stroke='#2D2622' stroke-width='2'/><text x='450' y='275' font-family='Fredoka' font-size='16' fill='#2D2622'>tiny piece of air</text><path d='M 440 285 Q 510 220 580 240' fill='none' stroke='#7CB7D0' stroke-width='3'/><path d='M 440 290 Q 510 360 580 340' fill='none' stroke='#7CB7D0' stroke-width='3'/><path d='M 440 280 Q 530 270 620 200' fill='none' stroke='#7CB7D0' stroke-width='3'/><line x1='440' y1='292' x2='620' y2='320' stroke='#FFB7A8' stroke-width='3'/><text x='600' y='200' font-family='Caveat' font-size='22' fill='#2D2622'>blue bounces a lot</text><text x='620' y='340' font-family='Caveat' font-size='18' fill='#5C4A3F'>red mostly keeps going</text><g transform='translate(150 410)'><circle cx='-15' cy='0' r='6' fill='#7CB7D0'/><circle cx='5' cy='0' r='6' fill='#7CB7D0'/><circle cx='25' cy='0' r='6' fill='#7CB7D0'/><text x='60' y='5' font-family='Fredoka' font-size='16' fill='#2D2622'>= what reaches your eyes from every direction</text></g></svg>"
-  },
-  "research": {
-    "open_question": "How exactly the sky's tint shifts under haze, dust, and pollution is well understood — but predicting daily sky colour from satellite data is still an open dataset/modelling problem.",
-    "benchmark": null
-  },
-  "follow_ups": [
-    "why does the sunset turn orange?",
-    "what colour is the sky on Mars?",
-    "why are clouds white if the sky is blue?"
-  ],
-  "field": "physics"
+    "question": "why does the sky look blue?",
+    "draw": [
+      { "k": "star",   "x": 130, "y": 180, "color": "yellow" },
+      { "k": "text",   "x": 130, "y": 240, "s": "sun", "size": "label" },
+      { "k": "line",   "x1": 170, "y1": 200, "x2": 380, "y2": 280 },
+      { "k": "circle", "x": 400, "y": 290, "r": 12, "color": "cream" },
+      { "k": "text",   "x": 410, "y": 260, "s": "tiny piece of air", "size": "caption" },
+      { "k": "line",   "x1": 412, "y1": 290, "x2": 600, "y2": 200 },
+      { "k": "line",   "x1": 412, "y1": 295, "x2": 600, "y2": 380 },
+      { "k": "text",   "x": 640, "y": 195, "s": "blue bounces a lot", "size": "label" },
+      { "k": "text",   "x": 640, "y": 395, "s": "red mostly keeps going", "size": "caption" }
+    ]
+  }
 }
 ```
+
+Notice: a single hero shape, lines/leaders pointing OUT to text callouts. No arrow. Different layout than before/after — fits the "one thing, many parts" question shape.
+
+## Example 3 — A vs B (eye cell vs hair cell)
+
+Visitor: "if every cell has the same DNA, why are eyes and hair different?"
+
+```
+{
+  "scene": {
+    "question": "same instructions, different parts used",
+    "draw": [
+      { "k": "box",   "x": 220, "y": 270, "color": "blue",   "label": "eye cell",  "dots": 6 },
+      { "k": "box",   "x": 580, "y": 270, "color": "yellow", "label": "hair cell", "dots": 6 },
+      { "k": "text",  "x": 220, "y": 130, "s": "eye instructions ON", "size": "label" },
+      { "k": "text",  "x": 580, "y": 130, "s": "hair instructions ON", "size": "label" },
+      { "k": "line",  "x1": 220, "y1": 145, "x2": 220, "y2": 200 },
+      { "k": "line",  "x1": 580, "y1": 145, "x2": 580, "y2": 200 },
+      { "k": "text",  "x": 400, "y": 280, "s": "same DNA in both", "size": "caption" }
+    ]
+  }
+}
+```
+
+Notice: TWO of the SAME shape (both `box`), different colors signal different roles, dots inside each suggest "many copies of the instruction book". Comparison without an arrow.
 
 # Field tag (the lab grows)
 

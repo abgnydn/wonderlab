@@ -30,6 +30,7 @@
 // =============================================================
 
 import { renderBeforeAfter } from './before-after.js';
+export { renderDraw, isValidDraw, DRAW_KINDS } from './draw.js';
 
 // Palette names → hex. The same swatches the system prompt names so
 // the model can pick a "color name" without ever seeing a hex code.
