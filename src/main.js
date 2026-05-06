@@ -60,6 +60,18 @@ function asSceneSpec(reply) {
   const customSvg = s.scene?.illustration_svg || '';
   const template  = s.scene?.template || null;
 
+  // Diagnostic — opens the black box. Inspect once with DevTools open
+  // to see exactly what the model returned, what we picked, and why
+  // the whiteboard ended up where it did.
+  console.groupCollapsed('[wonderlab] spec received from model');
+  console.log('raw spec:', s);
+  console.log('scene keys:', Object.keys(s.scene || {}));
+  console.log('has illustration_svg:', !!customSvg, '(length:', customSvg.length, ')');
+  console.log('has template:', !!template, template ? `(kind: ${template.kind || template.type})` : '');
+  if (customSvg) console.log('illustration_svg preview:', customSvg.slice(0, 200));
+  if (template)  console.log('template:', template);
+  console.groupEnd();
+
   // Picture resolution order:
   //   1. paintable custom SVG (sophisticated models, richest)
   //   2. model-supplied template (any model, always works)
@@ -71,10 +83,13 @@ function asSceneSpec(reply) {
   // that ignored both picture fields ends up with a real picture on
   // the whiteboard.
   let illustration = '';
+  let pictureSource = 'none';
   if (customSvg && isPaintableSvg(customSvg)) {
     illustration = customSvg;
+    pictureSource = 'custom-svg';
   } else {
-    const t = (template && isValidTemplate(template))
+    const useModelTemplate = template && isValidTemplate(template);
+    const t = useModelTemplate
       ? template
       : buildFallbackTemplate({
           question: s.scene?.question,
@@ -84,8 +99,15 @@ function asSceneSpec(reply) {
     const filled = { ...t };
     if (!filled.title && s.scene?.question) filled.title = s.scene.question;
     const built = renderTemplate(filled);
-    if (built) illustration = built;
+    if (built) {
+      illustration = built;
+      pictureSource = useModelTemplate ? 'model-template' : 'fallback-template';
+    }
   }
+
+  console.log('[wonderlab] picture source picked:', pictureSource,
+    '· illustration length:', illustration.length,
+    '· paintable:', isPaintableSvg(illustration));
 
   return {
     id: 'live',
@@ -309,6 +331,10 @@ function isPaintableSvg(s) {
 async function loadSpec(spec) {
   currentSpec = spec;
   paintSpec(spec);
+  console.log('[wonderlab] loadSpec start',
+    '· id:', spec.id,
+    '· svg length:', (spec.illustration_svg || '').length,
+    '· paintable:', isPaintableSvg(spec.illustration_svg));
   // Two render paths on the whiteboard:
   //   • spec carries an SVG → rasterise it (the live "illustration" mode)
   //   • spec has no SVG     → text-card mode (notepad-style, used when image
@@ -339,15 +365,19 @@ async function loadSpec(spec) {
 
   try {
     if (hasSvg) {
+      console.log('[wonderlab] → scene.play (paintable svg)');
       try {
         await scene.play(spec);
+        console.log('[wonderlab] scene.play OK');
       } catch (svgErr) {
         // SVG renderer threw — most often a malformed SVG slipped past
         // isPaintableSvg. Fall through cleanly so the visitor still has
         // a readable whiteboard.
+        console.warn('[wonderlab] scene.play threw:', svgErr);
         fallbackToTextCard(svgErr?.message || 'svg render error');
       }
     } else {
+      console.log('[wonderlab] → text-card (svg not paintable)');
       fallbackToTextCard(
         spec.illustration_svg ? 'svg present but unpaintable' : 'no svg in spec'
       );

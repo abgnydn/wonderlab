@@ -189,6 +189,7 @@ export class LabScene {
    */
   async _renderSvgToBoard(svg) {
     this.clearLoading();
+    console.log('[wonderlab] _renderSvgToBoard · svg length:', svg?.length || 0);
 
     // Defensive SVG sanitisation
     let svgText = svg.trim();
@@ -199,9 +200,11 @@ export class LabScene {
     // Try the live-draw path first; fall back to one-shot on any failure.
     try {
       await this._renderSvgStrokeByStroke(svgText);
+      console.log('[wonderlab] stroke-by-stroke OK');
     } catch (e) {
       console.info('[wonderlab] live-draw fell back to one-shot:', e?.message || e);
       await this._renderSvgOneShot(svgText);
+      console.log('[wonderlab] one-shot OK');
     }
   }
 
