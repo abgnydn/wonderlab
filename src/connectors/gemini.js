@@ -4,8 +4,8 @@
 // their AI Studio key. Same key never leaves their browser.
 // =============================================================
 
-import { makeReplyExtractor, parseFinalJson } from './extract.js';
-import { getSystemPrompt, NO_IMAGE_DIRECTIVE, JSON_ONLY_DIRECTIVE, languageDirective } from './system-prompt.js';
+import { makeReplyExtractor, parseFinalJson, buildMessageHistory } from './extract.js';
+import { getSystemPrompt, NO_IMAGE_DIRECTIVE, JSON_ONLY_DIRECTIVE, languageDirective, levelDirective } from './system-prompt.js';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 const DEFAULT_MODEL = 'gemini-2.5-flash';
@@ -45,7 +45,7 @@ export const geminiConnector = {
     }
   },
 
-  async ask(question, { withImage, key, model, language, onReply, onDone, onError }) {
+  async ask(question, { withImage, key, model, language, level, history, onReply, onDone, onError }) {
     if (!key) return onError(new Error('add your Gemini key in settings'));
     const t0 = Date.now();
     let system;
@@ -55,6 +55,7 @@ export const geminiConnector = {
     const userMsg = (question || '')
       + JSON_ONLY_DIRECTIVE
       + languageDirective(language)
+      + levelDirective(level)
       + (withImage === false ? NO_IMAGE_DIRECTIVE : '');
 
     let response;
@@ -69,7 +70,7 @@ export const geminiConnector = {
           max_tokens: withImage === false ? 2048 : 16000,
           messages: [
             { role: 'system', content: system },
-            { role: 'user',   content: userMsg },
+            ...buildMessageHistory(history, userMsg),
           ],
         }),
       });

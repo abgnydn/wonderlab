@@ -1153,6 +1153,43 @@
      Each one is a kid-voice branch question pulled from the current
      SceneSpec's `follow_ups` array. Click → asks it next. The whole
      strip slides in with a tiny stagger when populated. */
+  /* depth knob — segmented kid / curious / grad selector. Sits just
+     above the follow-ups strip so the visitor can flip depth and click
+     a follow-up in one motion. Stays visible (it's a per-question
+     control) and persists choice via localStorage. */
+  .depth-knob {
+    display: inline-flex;
+    gap: 0;
+    margin: 0 0 0.4rem;
+    padding: 0;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    box-shadow: var(--shadow-sm);
+    font-family: 'Fredoka', sans-serif;
+    align-self: flex-start;
+    overflow: hidden;
+  }
+  .depth-knob__btn {
+    background: transparent;
+    border: 0;
+    padding: 0.32rem 0.78rem;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: background .12s ease, color .12s ease;
+    border-right: 1.5px solid var(--ink-soft);
+  }
+  .depth-knob__btn:last-child  { border-right: 0; }
+  .depth-knob__btn:hover       { background: var(--sun-glow); color: var(--ink); }
+  .depth-knob__btn.is-on       { background: var(--sun); color: var(--ink); }
+  .depth-knob__btn.is-on:hover { background: var(--sun-deep); }
+  @media (max-width: 600px) {
+    .depth-knob__btn { padding: 0.28rem 0.65rem; font-size: 0.72rem; }
+  }
+
   .follow-ups-strip {
     display: flex;
     align-items: center;
@@ -1216,6 +1253,67 @@
   }
   .settings-draw-hint[hidden] { display: none; }
   .settings-draw-hint em      { font-style: normal; font-weight: 700; color: var(--rose); }
+
+  /* Glossary strip — clickable kid_word → real_term pills under the
+     answer card. The Rosetta hover already underlines glossary words
+     in the kid answer, but hover doesn't exist on touch screens — and
+     on desktop it hides the translation behind a hover. The strip
+     surfaces the same translation as a tactile pill row that flips on
+     tap. Each pill: front = kid_word, back = real_term in italic. */
+  .glossary-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+    align-items: center;
+    margin: 0.05rem 0 0.1rem;
+    padding: 0;
+    font-family: 'Nunito', sans-serif;
+  }
+  .glossary-strip[hidden] { display: none; }
+  .glossary-strip__head {
+    font-style: italic;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    margin-right: 0.1rem;
+  }
+  .glossary-pill {
+    appearance: none;
+    background: var(--paper);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 0.22rem 0.7rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    transition: background .15s ease, transform .12s ease, box-shadow .12s ease;
+    /* dotted underline hint that there's something here */
+    text-decoration: underline dotted var(--leaf-deep);
+    text-underline-offset: 3px;
+  }
+  .glossary-pill:hover  { background: var(--leaf); transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink); }
+  .glossary-pill:active { transform: translate(1px, 1px); box-shadow: 0 0 0 var(--ink); }
+  .glossary-pill.is-flipped {
+    background: var(--leaf-deep);
+    color: white;
+    font-style: italic;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .glossary-pill.is-flipped:hover { background: var(--leaf-deep); }
+  .glossary-pill__arrow {
+    display: inline-block;
+    margin-right: 0.25rem;
+    font-size: 0.78em;
+    opacity: 0.7;
+  }
+  @media (max-width: 600px) {
+    .glossary-pill { font-size: 0.74rem; padding: 0.18rem 0.6rem; }
+    .glossary-strip__head { font-size: 0.72rem; }
+  }
 
   /* benchmark chip — Hugging Science breadcrumb under the answer card.
      One-click bridge from the kid answer to the real open challenge.
@@ -1359,6 +1457,33 @@
   .share-btn:hover  { background: var(--sun-deep); transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
   .share-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); }
   .share-btn svg    { display: block; }
+
+  /* "play the picture" — sky-blue twin to the share button. Only shown
+     when iris's spec includes a `scene.narration`, i.e. she has a step-
+     by-step walk-through script ready to read aloud. */
+  .play-pic-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--sky);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 0.32rem 0.75rem 0.32rem 0.55rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 0.92rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+  }
+  .play-pic-btn[hidden] { display: none; }
+  .play-pic-btn:hover   { background: var(--sky-deep); color: white; transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+  .play-pic-btn:active  { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); }
+  .play-pic-btn svg     { display: block; }
+  .play-pic-btn.is-playing { background: var(--sky-deep); color: white; }
+  .play-pic-btn.is-playing svg polygon { transform: scale(0.85); }
 
   /* share modal */
   /* share button in the top bar — same shape as the gear, sun-yellow
@@ -1846,6 +1971,135 @@
     transform: none; box-shadow: var(--shadow-sm);
   }
   .share-action__ico { font-size: 1.05em; }
+
+  /* Embed snippet panel inside the share modal */
+  .share-embed {
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 2px dashed var(--ink-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .share-embed[hidden] { display: none; }
+  .share-embed__lede {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .share-embed__code {
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    background: var(--paper);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    padding: 0.55rem 0.7rem;
+    width: 100%;
+    resize: vertical;
+    box-sizing: border-box;
+    box-shadow: var(--shadow-sm);
+  }
+  .share-embed__code:focus {
+    outline: 2px solid var(--sun-deep);
+    outline-offset: 1px;
+  }
+  .share-embed__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  /* ============ NOTEBOOK PAGE (printable souvenir) ============
+     Hidden in normal flow. When the user clicks "save notebook" the
+     print stylesheet hides everything else and shows just this page,
+     so the browser's print dialog produces a clean PDF. */
+  .notebook-page {
+    /* off-screen by default — only the print stylesheet brings it on */
+    display: none;
+  }
+  .notebook-page * { box-sizing: border-box; }
+
+  body.printing-notebook { background: white !important; }
+  body.printing-notebook > .notebook-page { display: block !important; }
+  /* the print rules do the heavy lifting; the body class is mostly to
+     avoid flicker when the print dialog opens — Safari shows the page
+     briefly before the dialog, and this keeps it readable. */
+
+  @media print {
+    @page {
+      size: letter portrait;
+      margin: 0.6in 0.55in;
+    }
+    body > *:not(.notebook-page) { display: none !important; }
+    body { background: white !important; }
+    .notebook-page {
+      display: block !important;
+      font-family: 'Fredoka', 'Nunito', -apple-system, system-ui, sans-serif;
+      color: var(--ink, #2D2622);
+      background: white;
+      padding: 0;
+      max-width: 100%;
+    }
+    .notebook-page__masthead {
+      display: flex; align-items: baseline; justify-content: space-between;
+      border-bottom: 2px solid var(--ink, #2D2622);
+      padding-bottom: 0.3rem; margin-bottom: 1rem;
+    }
+    .notebook-page__masthead h1 {
+      font-family: 'Caveat', 'Brush Script MT', cursive;
+      font-size: 36pt; margin: 0; color: var(--ink, #2D2622);
+    }
+    .notebook-page__masthead h1 .accent { color: var(--rose, #E66363); }
+    .notebook-page__masthead .by {
+      font-size: 9pt; color: #5C4A3F; font-style: italic;
+    }
+    .notebook-page__question {
+      font-family: 'Caveat', cursive;
+      font-size: 28pt; margin: 0.5rem 0 0.8rem; line-height: 1.1;
+    }
+    .notebook-page__pic {
+      border: 2px solid var(--ink, #2D2622);
+      border-radius: 8pt;
+      padding: 0;
+      margin: 0 0 1rem;
+      background: #FCEFD2;
+      overflow: hidden;
+    }
+    .notebook-page__pic svg {
+      display: block; width: 100%; height: auto;
+    }
+    .notebook-page__answer {
+      font-size: 13pt; line-height: 1.55; margin: 0 0 0.8rem;
+    }
+    .notebook-page__section {
+      border-top: 1.5px solid #B5A99A;
+      padding-top: 0.5rem; margin-top: 0.7rem;
+    }
+    .notebook-page__section h3 {
+      font-family: 'Caveat', cursive;
+      font-size: 18pt; margin: 0 0 0.35rem; color: var(--ink, #2D2622);
+    }
+    .notebook-page__glossary {
+      display: grid;
+      grid-template-columns: 1fr 1fr; gap: 0.3rem 1rem;
+      font-size: 10.5pt;
+    }
+    .notebook-page__glossary span.kid  { font-weight: 700; }
+    .notebook-page__glossary span.real {
+      font-style: italic; color: #5C4A3F;
+    }
+    .notebook-page__research { font-size: 10.5pt; line-height: 1.45; }
+    .notebook-page__research a { color: var(--ink, #2D2622); text-decoration: underline; }
+    .notebook-page__footer {
+      margin-top: 1.2rem; padding-top: 0.4rem;
+      border-top: 1.5px solid #B5A99A;
+      display: flex; justify-content: space-between;
+      font-size: 8.5pt; color: #5C4A3F;
+    }
+  }
   #scene-answer-kid {
     font-family: 'Fredoka', sans-serif;
     font-weight: 500;
@@ -2869,6 +3123,15 @@
     <!-- one-time hint: appears only when the active backend needs an API key
          and there isn't one set. nudges the visitor toward the gear without
          demanding it. dismissable, but the gate is auto-applied on send. -->
+    <!-- depth knob — kid / curious / grad. picks how iris will frame the
+         next answer. the schema's `level` field already exists; this just
+         exposes it as a one-tap segmented control. -->
+    <div id="depth-knob" class="depth-knob" role="radiogroup" aria-label="answer depth">
+      <button type="button" class="depth-knob__btn" data-level="kid"     role="radio" aria-checked="false" title="simplest words, kid voice">kid</button>
+      <button type="button" class="depth-knob__btn is-on" data-level="curious" role="radio" aria-checked="true"  title="default — friendly + concrete">curious</button>
+      <button type="button" class="depth-knob__btn" data-level="expert"  role="radio" aria-checked="false" title="real terms, full depth">grad</button>
+    </div>
+
     <!-- chain bubbles: 2-3 follow-up questions from the last answer -->
     <div id="follow-ups-strip" class="follow-ups-strip" hidden aria-label="follow-up questions"></div>
 
@@ -2883,6 +3146,12 @@
 
     <div class="answer-card">
       <p id="scene-answer-kid">…</p>
+      <button type="button" id="play-pic-btn" class="play-pic-btn" hidden aria-label="play the picture — iris narrates it" title="iris narrates the picture step by step">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="6 4 20 12 6 20" fill="currentColor"/>
+        </svg>
+        <span>play the picture</span>
+      </button>
       <button type="button" id="share-btn" class="share-btn" aria-label="take a photo of the whiteboard" title="take a photo">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M4 7h3l2-2.5h6L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
@@ -2891,6 +3160,11 @@
         <span>share</span>
       </button>
     </div>
+
+    <!-- Glossary strip — kid_word ⇄ real_term pills. Same data as the
+         inline Rosetta hover, but always visible (no hover required, so
+         it works on mobile). Tap a pill to flip kid → real and back. -->
+    <div id="glossary-strip" class="glossary-strip" hidden aria-label="kid words to real terms"></div>
 
     <!-- Hugging Science breadcrumb — one-click bridge from this kid
          question to the real-world benchmark iris named in research.
@@ -2937,6 +3211,9 @@
     <span class="public-footer__chip public-footer__chip--privacy">
       <span aria-hidden="true">🛡️</span> no server · keys stay in this browser
     </span>
+    <a class="public-footer__chip" href="/landing.html" title="about wonderlab">
+      about ↗
+    </a>
     <a class="public-footer__chip" href="https://github.com/abgnydn/wonderlab" target="_blank" rel="noopener" title="source on github">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
         <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/>
@@ -3057,6 +3334,12 @@
         <button type="button" id="share-download" class="share-action">
           <span class="share-action__ico">⬇</span> download png
         </button>
+        <button type="button" id="share-notebook" class="share-action">
+          <span class="share-action__ico">📓</span> save notebook
+        </button>
+        <button type="button" id="share-embed" class="share-action">
+          <span class="share-action__ico">⌨</span> embed
+        </button>
         <button type="button" id="share-copy" class="share-action">
           <span class="share-action__ico">⧉</span> copy image
         </button>
@@ -3064,8 +3347,33 @@
           <span class="share-action__ico">↗</span> share
         </button>
       </div>
+
+      <!-- embed snippet panel — revealed when "embed" is clicked. The
+           textarea is pre-filled with an iframe pointing at this URL
+           (with ?embed=1 + the current question) so a blog / HF Space
+           can drop one line of HTML and get a live iris. -->
+      <div id="share-embed-panel" class="share-embed" hidden>
+        <div class="share-embed__lede">paste this anywhere — works in blogs, HF Spaces, Substack, Notion HTML blocks.</div>
+        <textarea id="share-embed-code" class="share-embed__code" readonly rows="3"></textarea>
+        <div class="share-embed__actions">
+          <button type="button" id="share-embed-copy" class="share-action">
+            <span class="share-action__ico">⧉</span> copy snippet
+          </button>
+          <a id="share-embed-preview" class="share-action" target="_blank" rel="noopener">
+            <span class="share-action__ico">↗</span> preview
+          </a>
+        </div>
+      </div>
     </div>
   </div>
+
+  <!-- ============ NOTEBOOK PAGE (printable souvenir) ============
+       Hidden during normal browsing. When the user clicks "save
+       notebook", main.js fills #notebook-page with a clean printable
+       layout (question, picture, kid answer, glossary, open question)
+       and triggers window.print() — the user's browser handles the
+       PDF dialog. Print stylesheet swaps to print-only view. -->
+  <div id="notebook-page" class="notebook-page" hidden aria-hidden="true"></div>
 
   <!-- ============ WELCOME OVERLAY (first-visit name + voice picker) ============ -->
   <div class="welcome-overlay" id="welcome-overlay" hidden>

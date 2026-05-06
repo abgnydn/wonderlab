@@ -99,6 +99,38 @@ export function resolveLanguage(setting) {
   return supported.has(setting) ? setting : 'en';
 }
 
+// Depth knob — translates the visitor's selection into a directive that
+// nudges iris's voice. The schema's `level` field already exists, but
+// the knob lets the visitor pick *up front* so we don't waste a turn
+// guessing. Default ("curious") gets no directive — the prompt already
+// targets that depth.
+export function levelDirective(level) {
+  const lvl = (level || 'curious').toLowerCase();
+  if (lvl === 'curious' || !lvl) return '';
+  if (lvl === 'kid') {
+    return [
+      '',
+      '',
+      '[depth: kid — even simpler than usual. 5-year-old voice in `reply` and `answer.kid`.',
+      'Shorter sentences. One concrete picture. Set `level` to "kid".',
+      'No technical terms anywhere visible. Tell the picture before you tell the words.]',
+    ].join('\n');
+  }
+  if (lvl === 'expert' || lvl === 'grad') {
+    return [
+      '',
+      '',
+      '[depth: grad — the visitor is a researcher or grad student.',
+      'Keep `reply` and `answer.kid` plain-words (the translation rule never breaks),',
+      'but write `answer.real` as a real 3-5 sentence paragraph with proper terminology, mechanism, and one named open question.',
+      'Glossary entries should pair the kid-words to precise technical terms (not approximations).',
+      '`research.open_question` should name the actual frontier — be specific about what is unknown.',
+      'Set `level` to "expert".]',
+    ].join('\n');
+  }
+  return '';
+}
+
 // Build the user directive appended to the question. English needs no
 // directive (the prompt already speaks English).
 export function languageDirective(language) {

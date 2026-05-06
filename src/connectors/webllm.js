@@ -8,8 +8,8 @@
 // isn't held back by a multi-MB JS bundle the user might not need.
 // =============================================================
 
-import { makeReplyExtractor, parseFinalJson } from './extract.js';
-import { getSystemPrompt, NO_IMAGE_DIRECTIVE, JSON_ONLY_DIRECTIVE, languageDirective } from './system-prompt.js';
+import { makeReplyExtractor, parseFinalJson, buildMessageHistory } from './extract.js';
+import { getSystemPrompt, NO_IMAGE_DIRECTIVE, JSON_ONLY_DIRECTIVE, languageDirective, levelDirective } from './system-prompt.js';
 import { WEBLLM_MODELS } from '../device-detect.js';
 
 const WEBLLM_CDN = 'https://esm.run/@mlc-ai/web-llm';
@@ -153,7 +153,7 @@ export const webllmConnector = {
   },
 
   async ask(question, {
-    withImage, model, language,
+    withImage, model, language, level, history,
     onReply, onDone, onError,
     onProgress,                         // optional: { progress, text } during model download
   }) {
@@ -176,6 +176,7 @@ export const webllmConnector = {
     const userMsg = (question || '')
       + JSON_ONLY_DIRECTIVE
       + languageDirective(language)
+      + levelDirective(level)
       + (withImage === false ? NO_IMAGE_DIRECTIVE : '');
 
     const extract = makeReplyExtractor(onReply);
@@ -187,7 +188,7 @@ export const webllmConnector = {
         max_tokens: withImage === false ? 2048 : 8192,
         messages: [
           { role: 'system', content: system },
-          { role: 'user',   content: userMsg },
+          ...buildMessageHistory(history, userMsg),
         ],
       });
       for await (const chunk of stream) {

@@ -9,9 +9,9 @@
 // hint in testConnection().
 // =============================================================
 
-import { makeReplyExtractor, parseFinalJson } from './extract.js';
+import { makeReplyExtractor, parseFinalJson, buildMessageHistory } from './extract.js';
 import { readOpenAISSE } from './gemini.js';
-import { getSystemPrompt, NO_IMAGE_DIRECTIVE, JSON_ONLY_DIRECTIVE, languageDirective } from './system-prompt.js';
+import { getSystemPrompt, NO_IMAGE_DIRECTIVE, JSON_ONLY_DIRECTIVE, languageDirective, levelDirective } from './system-prompt.js';
 
 const DEFAULT_URL   = 'http://localhost:1234/v1/chat/completions';
 const DEFAULT_MODEL = 'qwen3-14b-mlx';
@@ -51,7 +51,7 @@ export const lmstudioConnector = {
     }
   },
 
-  async ask(question, { withImage, url, model, language, onReply, onDone, onError }) {
+  async ask(question, { withImage, url, model, language, level, history, onReply, onDone, onError }) {
     const u = (url || DEFAULT_URL);
     const t0 = Date.now();
     let system;
@@ -61,6 +61,7 @@ export const lmstudioConnector = {
     const userMsg = (question || '')
       + JSON_ONLY_DIRECTIVE
       + languageDirective(language)
+      + levelDirective(level)
       + (withImage === false ? NO_IMAGE_DIRECTIVE : '');
 
     let response;
@@ -75,7 +76,7 @@ export const lmstudioConnector = {
           max_tokens: withImage === false ? 2048 : 16000,
           messages: [
             { role: 'system', content: system },
-            { role: 'user',   content: userMsg },
+            ...buildMessageHistory(history, userMsg),
           ],
         }),
       });

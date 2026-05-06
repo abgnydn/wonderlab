@@ -20,6 +20,7 @@ const OUT  = join(ROOT, 'public');
 // scripts/, drafts/, .env.example, etc.
 const SHIP = [
   'index.html',
+  'landing.html',
   'sw.js',
   'favicon.svg',
   'og.png',

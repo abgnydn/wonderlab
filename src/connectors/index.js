@@ -36,6 +36,7 @@ const defaultSettings = () => ({
   lmstudioUrl: 'http://localhost:1234/v1/chat/completions',
   drawIllustrations: null, // null → fall back to the connector's default
   language: 'auto',        // 'auto' resolves from navigator.language
+  level:    'curious',     // depth knob: 'kid' | 'curious' | 'expert'
 });
 
 export function loadSettings() {
@@ -74,6 +75,8 @@ export async function ask(question, settings, callbacks) {
     model:  settings.models[conn.id] || '',
     url:    conn.id === 'lmstudio' ? settings.lmstudioUrl : undefined,
     language: settings.language || 'auto',
+    level:    settings.level    || 'curious',
+    history:  Array.isArray(settings._history) ? settings._history : [],
   };
   return conn.ask(question, { ...params, ...callbacks });
 }

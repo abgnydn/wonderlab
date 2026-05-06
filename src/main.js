@@ -120,6 +120,60 @@ function paintSpec(spec) {
 
   paintFollowUps(isWelcome ? [] : (spec._follow_ups || []));
   paintBenchmarkChip(isWelcome ? null : spec._research?.benchmark);
+  paintPlayPicture(isWelcome ? '' : (spec.scene?.narration || ''));
+  paintGlossaryStrip(isWelcome ? [] : glossary);
+}
+
+// Glossary strip — same data as the inline Rosetta underline, surfaced
+// as tappable pills under the answer card. Each pill shows the kid_word;
+// tap → flips to the real_term so visitors can SEE the translation, not
+// just hover-discover it. Caps at 6 entries (matches the prompt).
+function paintGlossaryStrip(glossary) {
+  const strip = $('glossary-strip');
+  if (!strip) return;
+  strip.innerHTML = '';
+  const list = (glossary || []).filter(g => g?.kid_word && g?.real_term);
+  if (!list.length) {
+    strip.hidden = true;
+    return;
+  }
+  strip.hidden = false;
+  const head = document.createElement('span');
+  head.className = 'glossary-strip__head';
+  head.textContent = 'in researcher words →';
+  strip.appendChild(head);
+  list.slice(0, 6).forEach((g) => {
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = 'glossary-pill';
+    pill.dataset.kid = g.kid_word;
+    pill.dataset.real = g.real_term;
+    pill.title = `${g.kid_word} → ${g.real_term}`;
+    pill.textContent = g.kid_word;
+    pill.setAttribute('aria-label', `${g.kid_word} — researchers say ${g.real_term}`);
+    pill.addEventListener('click', () => {
+      const flipped = pill.classList.toggle('is-flipped');
+      pill.textContent = flipped ? g.real_term : g.kid_word;
+    });
+    strip.appendChild(pill);
+  });
+}
+
+// Play-the-picture button. Visible only when iris's spec carries a
+// `scene.narration` — a short walk-through script of the picture.
+// Click → audio.speak the narration regardless of the master voice
+// toggle (this is an explicit user action, not auto-narration).
+function paintPlayPicture(narration) {
+  const btn = $('play-pic-btn');
+  if (!btn) return;
+  if (!narration || typeof narration !== 'string' || narration.trim().length < 12) {
+    btn.hidden = true;
+    btn.classList.remove('is-playing');
+    btn.dataset.text = '';
+    return;
+  }
+  btn.hidden = false;
+  btn.dataset.text = narration.trim();
 }
 
 // Benchmark chip — when iris cites a real-world benchmark, render it as
@@ -383,6 +437,17 @@ function setReplyOnTurn(thenEl, text, { streaming = false } = {}) {
 // ask the lab
 // -----------------------------------------------------------
 let asking = false;
+// Conversation memory — last few Q/A pairs from THIS session.
+// Lets iris answer follow-ups like "why?" or "what about water?"
+// with the previous turn's context. Capped to 4 turns to keep the
+// system prompt + history under the model's input budget.
+const chatHistory = [];
+const HISTORY_MAX = 4;
+function pushHistory(q, a) {
+  if (!q || !a) return;
+  chatHistory.push({ q, a });
+  while (chatHistory.length > HISTORY_MAX) chatHistory.shift();
+}
 
 async function ask(question) {
   const q = (question || '').trim();
@@ -416,7 +481,9 @@ async function ask(question) {
   // Confirm we have a working backend before dispatching. If the active
   // connector needs a key and the key is empty, open settings instead of
   // tripping a confusing "401 / missing key" error.
-  const settings = loadSettings();
+  // We tuck the in-memory chat history under `_history` so connectorAsk
+  // can forward it to the LLM without us having to change every signature.
+  const settings = { ...loadSettings(), _history: chatHistory.slice() };
   const conn = getActiveConnector(settings);
   if (!conn) {
     scene.clearLoading?.();
@@ -491,7 +558,12 @@ async function ask(question) {
     // iris remembers — persist the last real question + kid answer so
     // the next visit's welcome scene can callback. Skip welcome specs.
     if (spec.id !== 'welcome' && q) {
-      setLastAnswer(q, spec.answer?.kid || spec._reply || '');
+      const kidAns = spec.answer?.kid || spec._reply || '';
+      setLastAnswer(q, kidAns);
+      // and feed THIS turn into the in-memory history so the NEXT ask
+      // can see "why?" / "what about water?" / "show me a picture"
+      // chain back to what iris just said
+      pushHistory(q, kidAns);
     }
   } catch (e) {
     const msg = `couldn't reach the lab — ${e.message}`;
@@ -808,6 +880,76 @@ function reactToHover(kind, p) {
 // stylus / mouse / touch all work; touchAction: none on the buttons
 // stops mobile browsers from scrolling while a button is held.
 // -----------------------------------------------------------
+// Depth knob — kid / curious / grad. Persisted via the connector
+// settings store under `level`. Default is "curious" (the friendly
+// middle). Selection drives a directive injected into the next ask.
+function setupDepthKnob() {
+  const knob = $('depth-knob');
+  if (!knob) return;
+  const buttons = Array.from(knob.querySelectorAll('.depth-knob__btn'));
+
+  // restore the saved level (or default)
+  const cur = (loadSettings().level || 'curious').toLowerCase();
+  buttons.forEach((b) => {
+    const on = (b.dataset.level === cur);
+    b.classList.toggle('is-on', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+
+  buttons.forEach((b) => {
+    b.addEventListener('click', () => {
+      const lvl = b.dataset.level;
+      buttons.forEach((other) => {
+        const on = (other === b);
+        other.classList.toggle('is-on', on);
+        other.setAttribute('aria-checked', on ? 'true' : 'false');
+      });
+      const s = loadSettings();
+      s.level = lvl;
+      saveSettings(s);
+    });
+  });
+}
+
+// "Play the picture" — when the spec carries a `scene.narration`,
+// show the play button. Clicking speaks the narration via the existing
+// audio.speak path (Kokoro if available, falls back to the browser's
+// SpeechSynthesis). Bypasses the global voice toggle: this is an
+// explicit user action, not auto-narration.
+function setupPlayPicture() {
+  const btn = $('play-pic-btn');
+  if (!btn) return;
+  let playing = false;
+  let pollHandle = null;
+
+  const stop = () => {
+    audio.shutUp?.();
+    btn.classList.remove('is-playing');
+    playing = false;
+    if (pollHandle) { clearInterval(pollHandle); pollHandle = null; }
+    scene?.setSpeaking?.(false);
+  };
+
+  btn.addEventListener('click', () => {
+    if (playing) { stop(); return; }
+    const text = btn.dataset.text || '';
+    if (!text) return;
+    btn.classList.add('is-playing');
+    playing = true;
+    scene?.setSpeaking?.(true);
+    audio.speak?.(text);
+    // poll until the speech ends, then drop the playing state
+    pollHandle = setInterval(() => {
+      const stillTalking = (typeof window !== 'undefined' && window.speechSynthesis?.speaking)
+        || audio.isSpeaking?.();
+      if (!stillTalking) stop();
+    }, 350);
+  });
+
+  // any new question starting cancels narration
+  document.getElementById('ask-form')?.addEventListener('submit', () => { if (playing) stop(); });
+}
+
 function setupTouchDpad() {
   const dpad = $('touch-dpad');
   if (!dpad || !scene) return;
@@ -1338,6 +1480,82 @@ function setupSettings() {
 // share — render the current whiteboard + spec into a portrait
 // share card and offer download / copy / native share.
 // -----------------------------------------------------------
+// Build the printable notebook layout from a spec. The SVG goes inline
+// (so it prints as crisp vector art, not a rasterized canvas snap).
+// Sanitization: we only use the spec's *own* SVG string, which the
+// schema constrains to a small element whitelist server-side. We still
+// strip <script> defensively in case a small/local model slips one in.
+function buildNotebookPage(spec) {
+  const page = document.getElementById('notebook-page');
+  if (!page) throw new Error('notebook host missing');
+
+  const question = spec.question || 'wonderlab notebook';
+  const kidAns   = spec.answer?.kid || spec._reply || '';
+  const realAns  = spec.answer?.real || '';
+  const glossary = spec.answer?.glossary || [];
+  const openQ    = spec._research?.open_question || spec.research?.open_question || '';
+  const benchRaw = spec._research?.benchmark      || spec.research?.benchmark      || '';
+  const bench    = resolveBenchmark(benchRaw);
+
+  // strip <script> from the SVG defensively
+  let svg = spec.scene?.illustration_svg || '';
+  if (typeof svg === 'string') {
+    svg = svg.replace(/<script[\s\S]*?<\/script>/gi, '')
+             .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+             .replace(/\son\w+\s*=\s*'[^']*'/gi, '');
+  } else {
+    svg = '';
+  }
+
+  const name = (typeof getName === 'function' ? getName() : '') || '';
+  const nameLine = name ? ` · for ${escapeHTML(name)}` : '';
+  const dateStr  = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
+  page.innerHTML = `
+    <header class="notebook-page__masthead">
+      <h1>wonder<span class="accent">lab</span> · iris's notebook</h1>
+      <span class="by">${escapeHTML(dateStr)}${nameLine}</span>
+    </header>
+
+    <h2 class="notebook-page__question">${escapeHTML(question)}</h2>
+
+    ${svg ? `<figure class="notebook-page__pic">${svg}</figure>` : ''}
+
+    <p class="notebook-page__answer">${escapeHTML(kidAns)}</p>
+
+    ${realAns ? `
+      <section class="notebook-page__section">
+        <h3>in researcher words</h3>
+        <p class="notebook-page__answer" style="font-size:11.5pt;line-height:1.5">${escapeHTML(realAns)}</p>
+      </section>
+    ` : ''}
+
+    ${glossary.length ? `
+      <section class="notebook-page__section">
+        <h3>kid words → real terms</h3>
+        <div class="notebook-page__glossary">
+          ${glossary.slice(0, 6).map(g => `
+            <div><span class="kid">${escapeHTML(g.kid_word || '')}</span> · <span class="real">${escapeHTML(g.real_term || '')}</span></div>
+          `).join('')}
+        </div>
+      </section>
+    ` : ''}
+
+    ${(openQ || bench) ? `
+      <section class="notebook-page__section notebook-page__research">
+        <h3>where this question goes next</h3>
+        ${openQ ? `<p>${escapeHTML(openQ)}</p>` : ''}
+        ${bench ? `<p><strong>tied to:</strong> <a href="${escapeAttr(bench.url)}">${escapeHTML(bench.label)}</a>${bench.note ? ` — <em>${escapeHTML(bench.note)}</em>` : ''}</p>` : ''}
+      </section>
+    ` : ''}
+
+    <footer class="notebook-page__footer">
+      <span>made at the-wonderlab.pages.dev</span>
+      <span>by Ahmet Barış Günaydın · barisgunaydin.com</span>
+    </footer>
+  `;
+}
+
 function setupShare() {
   const btn      = $('share-btn');
   const topBtn   = $('share-top-btn');
@@ -1348,6 +1566,12 @@ function setupShare() {
   const cpBtn    = $('share-copy');
   const shBtn    = $('share-native');
   const linkBtn  = $('share-copylink');
+  const nbBtn    = $('share-notebook');
+  const embedBtn = $('share-embed');
+  const embedPanel = $('share-embed-panel');
+  const embedCode  = $('share-embed-code');
+  const embedCopy  = $('share-embed-copy');
+  const embedPrev  = $('share-embed-preview');
   if (!modal || !host) return;
 
   let cardCanvas = null;     // last rendered share card
@@ -1407,6 +1631,75 @@ function setupShare() {
 
   btn?.addEventListener('click', openShare);
   topBtn?.addEventListener('click', openShare);
+
+  // embed — paste-a-script-style affordance. Click reveals a textarea
+  // with an <iframe> snippet that drops a live iris (with the visitor's
+  // current question prefilled) into any blog / HF Space / Substack /
+  // Notion HTML block. The host gets a real working lab — the visitor
+  // gets distribution.
+  function buildEmbedSnippet() {
+    const origin = location.origin || 'https://the-wonderlab.pages.dev';
+    const q = (currentSpec && currentSpec.id !== 'welcome') ? (currentSpec.question || '') : '';
+    const url = q
+      ? `${origin}/?embed=1&q=${encodeURIComponent(q)}`
+      : `${origin}/?embed=1`;
+    const snippet = `<iframe src="${url}" width="100%" height="640" loading="lazy" style="border:0;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.08);max-width:720px;display:block;margin:1rem auto" allow="microphone *; clipboard-write *" title="wonderlab — ${q ? escapeAttr(q) : 'open scientific questions, in plain words'}"></iframe>`;
+    return { snippet, url };
+  }
+  embedBtn?.addEventListener('click', () => {
+    if (!embedPanel || !embedCode) return;
+    const { snippet, url } = buildEmbedSnippet();
+    embedCode.value = snippet;
+    if (embedPrev) embedPrev.href = url;
+    const willOpen = embedPanel.hidden;
+    embedPanel.hidden = !willOpen;
+    if (willOpen) {
+      // give the panel a tick to render, then select all so a Cmd-C copies it
+      setTimeout(() => { embedCode.focus(); embedCode.select(); }, 30);
+      setStatus('embed snippet ready — copy it into your blog or HF Space.', 'ok');
+    }
+  });
+  embedCopy?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard?.writeText?.(embedCode.value);
+      setStatus('embed snippet copied — paste it into your post.', 'ok');
+    } catch (e) {
+      setStatus(`copy failed — ${e?.message || e}`, 'error');
+    }
+  });
+
+  // save notebook (PDF souvenir) — the kid's printable lab note. Builds
+  // a clean printable view from the current spec and pops the browser's
+  // print dialog. The visitor picks "Save as PDF" / "Save to Files" and
+  // gets a one-pager: question, picture, kid answer, glossary, open
+  // question + benchmark link.
+  nbBtn?.addEventListener('click', () => {
+    const spec = currentSpec;
+    if (!spec || spec.id === 'welcome') {
+      setStatus('ask iris something first — there\'s nothing to save in the notebook yet.', 'error');
+      return;
+    }
+    try {
+      buildNotebookPage(spec);
+      document.body.classList.add('printing-notebook');
+      // give the layout a tick to settle, then print
+      setTimeout(() => {
+        try { window.print(); } catch (e) { console.warn('print failed', e); }
+      }, 60);
+      const cleanup = () => {
+        document.body.classList.remove('printing-notebook');
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      // Safari / mobile fallback: clean up after a few seconds even if
+      // the afterprint event never fires (it's flaky on mobile WebKit)
+      setTimeout(cleanup, 4000);
+      setStatus('opened the print dialog — pick "Save as PDF".', 'ok');
+    } catch (e) {
+      console.error('[notebook] build failed:', e);
+      setStatus(`couldn't build the notebook — ${e.message || e}`, 'error');
+    }
+  });
 
   // copy link — the simplest share path, no rendering required
   linkBtn?.addEventListener('click', async () => {
@@ -1510,6 +1803,8 @@ async function main() {
   setupSettings();
   setupShare();
   setupTouchDpad();
+  setupDepthKnob();
+  setupPlayPicture();
 
   // Audio context can't start until the user interacts with the page.
   // First click/keypress anywhere wakes it up + starts the ambient hum.
@@ -1645,6 +1940,50 @@ async function main() {
   // the chat input — one-tap revisit, "or just type something fresh"
   const last = getLastQuestion();
   if (last) paintFollowUps([last]);
+
+  // ?q=... → auto-submit. Powers shareable links (twitter / blog / chat).
+  // Has to come after the welcome scene loads so the visitor sees iris
+  // for a beat before the new question kicks off — otherwise they land
+  // straight in "thinking…" and miss the room itself.
+  handleUrlQuery();
+}
+
+// Pull ?q= (and optional ?level=) off the URL on first load and on the
+// browser's back/forward navigation. We strip ?q= from the URL after we
+// kick the question off so a refresh doesn't re-fire it forever.
+function handleUrlQuery() {
+  const run = () => {
+    let params;
+    try { params = new URL(location.href).searchParams; } catch { return; }
+    const q = (params.get('q') || '').trim();
+    if (!q) return;
+    // optional ?level=kid|curious|grad — applies once for this question
+    const level = (params.get('level') || '').toLowerCase();
+    if (level && ['kid', 'curious', 'grad', 'expert'].includes(level)) {
+      try {
+        const s = loadSettings();
+        s.level = level === 'grad' ? 'expert' : level;
+        saveSettings(s);
+      } catch {}
+    }
+    // strip ?q so refresh doesn't loop and so share-link copying gives
+    // a clean URL after the visitor is already in the conversation
+    try {
+      const url = new URL(location.href);
+      url.searchParams.delete('q');
+      url.searchParams.delete('level');
+      history.replaceState({}, '', url.toString());
+    } catch {}
+    const input = $('ask-input');
+    if (input) input.value = q;
+    // small delay so the welcome scene has a moment to settle before
+    // the loading paint takes over the whiteboard
+    setTimeout(() => ask(q), 350);
+  };
+  run();
+  // also re-run on history nav (e.g. visitor hits back from a deep
+  // result page that had ?q in the URL)
+  window.addEventListener('popstate', run);
 }
 
 main();

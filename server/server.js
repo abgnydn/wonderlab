@@ -80,6 +80,10 @@ const SCENE_SCHEMA = {
       properties: {
         question:         { type: 'string' },
         illustration_svg: { type: 'string' },
+        narration: {
+          type: 'string',
+          description: '30-60s kid-voice walk-through of the picture step-by-step. Optional but encouraged for sequence pictures.',
+        },
       },
     },
     research: {
@@ -200,6 +204,50 @@ function languageDirective(code) {
   ].join('\n');
 }
 
+// Mirror of src/connectors/system-prompt.js levelDirective. Default
+// "curious" = no extra directive (the prompt already targets that depth).
+function levelDirective(level) {
+  const lvl = (level || 'curious').toLowerCase();
+  if (lvl === 'curious' || !lvl) return '';
+  if (lvl === 'kid') {
+    return [
+      '',
+      '',
+      '[depth: kid — even simpler than usual. 5-year-old voice in `reply` and `answer.kid`.',
+      'Shorter sentences. One concrete picture. Set `level` to "kid".',
+      'No technical terms anywhere visible. Tell the picture before you tell the words.]',
+    ].join('\n');
+  }
+  if (lvl === 'expert' || lvl === 'grad') {
+    return [
+      '',
+      '',
+      '[depth: grad — the visitor is a researcher or grad student.',
+      'Keep `reply` and `answer.kid` plain-words (the translation rule never breaks),',
+      'but write `answer.real` as a real 3-5 sentence paragraph with proper terminology, mechanism, and one named open question.',
+      'Glossary entries should pair the kid-words to precise technical terms (not approximations).',
+      '`research.open_question` should name the actual frontier — be specific about what is unknown.',
+      'Set `level` to "expert".]',
+    ].join('\n');
+  }
+  return '';
+}
+
+// Build the OpenAI / Anthropic messages array. Both APIs accept the same
+// `{ role, content }` shape. Strict alternation, capped to MAX_TURNS.
+function buildMessageHistory(history, userMsg, MAX_TURNS = 4) {
+  const out = [];
+  if (Array.isArray(history) && history.length) {
+    const pruned = history.slice(-MAX_TURNS);
+    for (const turn of pruned) {
+      if (turn?.q && typeof turn.q === 'string') out.push({ role: 'user',      content: turn.q });
+      if (turn?.a && typeof turn.a === 'string') out.push({ role: 'assistant', content: turn.a });
+    }
+  }
+  out.push({ role: 'user', content: userMsg });
+  return out;
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js':   'text/javascript; charset=utf-8',
@@ -281,17 +329,18 @@ function makeReplyExtractor(onDelta) {
 // Generic OpenAI-compatible streaming call. Used by both gemini and
 // lmstudio backends — they only differ in URL, auth, and model name.
 // =============================================================
-async function askOpenAICompat({ url, model, headers, question, label, withImage, language, onReply, onDone, onError }) {
+async function askOpenAICompat({ url, model, headers, question, label, withImage, language, level, history, onReply, onDone, onError }) {
   const t0 = Date.now();
   const userMsg = question
     + '\n\nReply with a single JSON object matching the contract. No prose, no markdown fences. /no_think'
     + languageDirective(language)
+    + levelDirective(level)
     + (withImage === false ? NO_IMAGE_DIRECTIVE : '');
   const body = {
     model,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user',   content: userMsg },
+      ...buildMessageHistory(history, userMsg),
     ],
     stream: true,
     temperature: 0.5,
@@ -369,7 +418,7 @@ async function askOpenAICompat({ url, model, headers, question, label, withImage
   });
 }
 
-async function askGeminiStreaming(question, { withImage, language, ...callbacks }) {
+async function askGeminiStreaming(question, { withImage, language, level, history, ...callbacks }) {
   if (!GEMINI_KEY) {
     return callbacks.onError(new Error(
       'Gemini backend needs GEMINI_API_KEY. Get one (free, no card) at https://aistudio.google.com/apikey'
@@ -383,11 +432,13 @@ async function askGeminiStreaming(question, { withImage, language, ...callbacks 
     label:   'Gemini',
     withImage,
     language,
+    level,
+    history,
     ...callbacks,
   });
 }
 
-async function askLmStudioStreamingNew(question, { withImage, language, ...callbacks }) {
+async function askLmStudioStreamingNew(question, { withImage, language, level, history, ...callbacks }) {
   return askOpenAICompat({
     url:     LMSTUDIO_URL,
     model:   MODEL,
@@ -396,11 +447,13 @@ async function askLmStudioStreamingNew(question, { withImage, language, ...callb
     label:   'LM Studio',
     withImage,
     language,
+    level,
+    history,
     ...callbacks,
   });
 }
 
-async function askCerebrasStreaming(question, { withImage, language, ...callbacks }) {
+async function askCerebrasStreaming(question, { withImage, language, level, history, ...callbacks }) {
   if (!CEREBRAS_KEY) {
     return callbacks.onError(new Error(
       'Cerebras backend needs CEREBRAS_API_KEY. Free, no card: https://cloud.cerebras.ai/'
@@ -414,6 +467,8 @@ async function askCerebrasStreaming(question, { withImage, language, ...callback
     label:   'Cerebras',
     withImage,
     language,
+    level,
+    history,
     ...callbacks,
   });
 }
@@ -462,7 +517,7 @@ function sdkModelId(alias) {
   return alias || 'claude-sonnet-4-6';
 }
 
-async function askClaudeSDK(question, { withImage, language, onReply, onDone, onError }) {
+async function askClaudeSDK(question, { withImage, language, level, history, onReply, onDone, onError }) {
   const client = await getAnthropicClient();
   if (!client) return null;       // signal "fall back to CLI"
   const t0 = Date.now();
@@ -470,6 +525,7 @@ async function askClaudeSDK(question, { withImage, language, onReply, onDone, on
   const userMsg =
     question
     + languageDirective(language)
+    + levelDirective(level)
     + (withImage === false ? NO_IMAGE_DIRECTIVE : '');
 
   // Single tool that mirrors the JSON-schema route the CLI uses. The
@@ -493,7 +549,7 @@ async function askClaudeSDK(question, { withImage, language, onReply, onDone, on
       system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       tools: [tool],
       tool_choice: { type: 'tool', name: 'StructuredOutput' },
-      messages: [{ role: 'user', content: userMsg }],
+      messages: buildMessageHistory(history, userMsg),
     });
 
     // Pipe streaming deltas to the same extractor the CLI path uses.
@@ -546,11 +602,23 @@ async function askClaudeWithFallback(question, opts) {
   return askClaudeStreaming(question, opts);
 }
 
-function askClaudeStreaming(question, { withImage, language, onReply, onDone, onError }) {
+function askClaudeStreaming(question, { withImage, language, level, history, onReply, onDone, onError }) {
   const schema = withImage === false ? SCENE_SCHEMA_NO_IMAGE : SCENE_SCHEMA;
+  // The CLI accepts a single user prompt, not a messages array. We
+  // collapse any prior turns into a small block at the top so iris has
+  // the recent thread without duplicating system instructions.
+  const histBlock = (Array.isArray(history) && history.length)
+    ? '\n\n[recent conversation — for context, do not repeat]\n'
+      + history.slice(-3).map(t =>
+          `Visitor: ${String(t.q || '').slice(0, 600)}\nIris: ${String(t.a || '').slice(0, 600)}`
+        ).join('\n---\n')
+      + '\n[/recent conversation]\n\n'
+    : '';
   const userMsg =
-    question
+    histBlock
+    + question
     + languageDirective(language)
+    + levelDirective(level)
     + (withImage === false ? NO_IMAGE_DIRECTIVE : '');
   const args = [
     '-p',
@@ -679,13 +747,15 @@ function readBody(req) {
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/api/ask') {
-    let question, withImage = true, language = 'en';
+    let question, withImage = true, language = 'en', level = 'curious', history = [];
     try {
       const body = await readBody(req);
       const parsed = JSON.parse(body || '{}');
       question  = parsed.question;
       withImage = parsed.withImage !== false;     // default true; only false disables it
       language  = (typeof parsed.language === 'string' && parsed.language) || 'en';
+      level     = (typeof parsed.level === 'string'    && parsed.level)    || 'curious';
+      history   = Array.isArray(parsed.history) ? parsed.history : [];
       if (!question || typeof question !== 'string') {
         res.writeHead(400, { 'content-type': 'application/json' });
         return res.end(JSON.stringify({ error: 'missing question' }));
@@ -695,7 +765,7 @@ const server = http.createServer(async (req, res) => {
       return res.end(JSON.stringify({ error: e.message }));
     }
 
-    console.log(`[ask]${withImage ? '' : ' [no-image]'}${language && language !== 'en' ? ` [${language}]` : ''} ${question.slice(0, 80)}`);
+    console.log(`[ask]${withImage ? '' : ' [no-image]'}${language && language !== 'en' ? ` [${language}]` : ''}${level !== 'curious' ? ` [${level}]` : ''}${history.length ? ` [+${history.length} turns]` : ''} ${question.slice(0, 80)}`);
     res.writeHead(200, {
       'content-type':  'text/event-stream; charset=utf-8',
       'cache-control': 'no-cache, no-transform',
@@ -727,6 +797,8 @@ const server = http.createServer(async (req, res) => {
     askPrimary(question, {
       withImage,
       language,
+      level,
+      history,
       onReply: (delta) => send('reply', { text: delta }),
       onDone:  (result) => {
         cleanup();

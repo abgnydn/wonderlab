@@ -61,6 +61,28 @@ export function makeReplyExtractor(onDelta) {
   };
 }
 
+// Build the messages array for an LLM call. Both Anthropic and the
+// OpenAI-compat format use the same `{ role, content }` shape with
+// alternating user/assistant turns, so this builder works for every
+// connector. `history` is an array of `{ q, a }` past turns; we append
+// the current user message at the end.
+//
+// We strictly alternate roles (Anthropic rejects two user-in-a-row),
+// drop empty entries, and cap the history to MAX_TURNS so older
+// context doesn't crowd the system prompt out.
+export function buildMessageHistory(history, userMsg, MAX_TURNS = 4) {
+  const out = [];
+  if (Array.isArray(history) && history.length) {
+    const pruned = history.slice(-MAX_TURNS);
+    for (const turn of pruned) {
+      if (turn?.q && typeof turn.q === 'string') out.push({ role: 'user',      content: turn.q });
+      if (turn?.a && typeof turn.a === 'string') out.push({ role: 'assistant', content: turn.a });
+    }
+  }
+  out.push({ role: 'user', content: userMsg });
+  return out;
+}
+
 // Parse the final JSON, recovering from any prose wrapping the model added
 // (some smaller models emit "Sure, here's your JSON:" before the object).
 export function parseFinalJson(fullText) {

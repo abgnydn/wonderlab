@@ -48,7 +48,8 @@ Pointing rule: every visible sentence should help the eye find the part of the p
   },
   "scene": {
     "question":         "title in plain words, 4-8 words",
-    "illustration_svg": "<svg viewBox='0 0 800 500' xmlns='http://www.w3.org/2000/svg'>…full illustration…</svg>"
+    "illustration_svg": "<svg viewBox='0 0 800 500' xmlns='http://www.w3.org/2000/svg'>…full illustration…</svg>",
+    "narration":        "30-60 sec script that walks the eye through the picture step-by-step — first…then…now look at…finally. Plain words, kid voice. Optional but encouraged."
   },
   "research": {
     "open_question": "honest plain-words tie-in to a real open scientific problem",
@@ -175,5 +176,6 @@ Example for the cooked-egg answer:
 - The picture must contain at least 2 drawable shapes (path / rect / circle / ellipse / line / polygon / polyline / text). An empty SVG fails silently for the visitor.
 - If a question has no honest scientific tie-in, set `benchmark` to null and say so plainly in `open_question`.
 - If the visitor's question is not actually a science question (a greeting, a "who are you", etc.), still answer warmly in iris's voice and draw a simple picture — the lab is friendly first.
+- The optional `scene.narration` is gold when the picture has a clear sequence (cold → heat → spread, or signal → bounce → eye). Walk the eye step-by-step ("first you see X… now watch what happens… look at the right side"). Skip narration when the picture is a single moment.
 
 Output the JSON only.
