@@ -1259,21 +1259,30 @@
      in the kid answer, but hover doesn't exist on touch screens — and
      on desktop it hides the translation behind a hover. The strip
      surfaces the same translation as a tactile pill row that flips on
-     tap. Each pill: front = kid_word, back = real_term in italic. */
+     tap. Each pill: front = kid_word, back = real_term in italic.
+     The whole strip sits on a translucent paper panel so it pops
+     against the wood floor of the lab. */
   .glossary-strip {
     display: flex;
     flex-wrap: wrap;
     gap: 0.42rem;
     align-items: center;
     margin: 0.05rem 0 0.1rem;
-    padding: 0;
+    padding: 0.45rem 0.6rem;
     font-family: 'Nunito', sans-serif;
+    background: rgba(255, 248, 232, 0.92);
+    border: 2px solid var(--ink);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
   }
   .glossary-strip[hidden] { display: none; }
   .glossary-strip__head {
     font-style: italic;
-    font-size: 0.78rem;
-    color: var(--ink-soft);
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ink);
     margin-right: 0.1rem;
   }
   .glossary-pill {
@@ -1326,11 +1335,17 @@
     flex-wrap: wrap;
     font-family: 'Nunito', sans-serif;
     font-size: 0.82rem;
-    color: var(--ink-soft);
-    padding: 0.05rem 0.1rem;
+    color: var(--ink);
+    padding: 0.42rem 0.65rem;
+    background: rgba(255, 248, 232, 0.92);
+    border: 2px solid var(--ink);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
   }
   .benchmark-chip[hidden] { display: none; }
-  .benchmark-chip__lede   { font-style: italic; }
+  .benchmark-chip__lede   { font-style: italic; font-weight: 700; }
   .benchmark-chip__link {
     background: var(--sky);
     color: var(--ink);

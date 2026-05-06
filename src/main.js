@@ -231,9 +231,19 @@ function paintFollowUps(list) {
 }
 
 // Decide whether a SceneSpec's illustration_svg is worth rendering.
-// "<svg></svg>" or "<svg><title>…</title></svg>" should NOT be — those
-// produce a blank whiteboard. We require both a parseable SVG root AND
-// at least 2 drawable shapes/text nodes inside.
+// Empty SVGs ("<svg></svg>", "<svg><title/></svg>", "<svg><defs/></svg>")
+// produce a blank whiteboard, so we filter them out and fall back to the
+// text-card. We require:
+//   • parseable SVG root
+//   • at least 3 drawable nodes that *render pixels* (shapes or non-empty
+//     text). <defs>, <title>, <desc>, <metadata>, and bare <g> wrappers
+//     don't count.
+//   • some kind of human-readable text inside (a label or title) OR
+//     the picture has many shapes (≥6) so it can stand on its own.
+// Gemini Flash sometimes emits a stub like `<svg viewBox="…"/>` with
+// nothing inside — that returned 0 drawables (correct) but the previous
+// version returned true if the model wrapped a single shape. This is
+// tighter and falls through more often.
 function isPaintableSvg(s) {
   if (typeof s !== 'string' || !s.includes('<svg')) return false;
   try {
@@ -242,10 +252,19 @@ function isPaintableSvg(s) {
     if (doc.querySelector('parsererror')) return false;
     const root = doc.documentElement;
     if (!root || root.nodeName.toLowerCase() !== 'svg') return false;
-    const drawable = root.querySelectorAll(
-      'path, rect, circle, ellipse, line, polyline, polygon, text, image'
+    // count *real* drawables — skip elements that live inside <defs>
+    const allDrawables = root.querySelectorAll(
+      'path, rect, circle, ellipse, line, polyline, polygon, image'
     );
-    return drawable.length >= 2;
+    let drawableCount = 0;
+    allDrawables.forEach((el) => {
+      if (!el.closest('defs')) drawableCount++;
+    });
+    const textNodes = Array.from(root.querySelectorAll('text'))
+      .filter(t => !t.closest('defs') && (t.textContent || '').trim().length > 0);
+    if (drawableCount + textNodes.length < 3) return false;
+    // require either a label or enough shapes to read as a picture
+    return textNodes.length >= 1 || drawableCount >= 6;
   } catch { return false; }
 }
 
@@ -263,15 +282,37 @@ async function loadSpec(spec) {
   // so the visitor at least sees the answer.
   const hasSvg = isPaintableSvg(spec.illustration_svg);
   STATUS(hasSvg ? 'drawing…' : 'on the whiteboard');
-  try {
-    if (hasSvg) {
-      await scene.play(spec);
-    } else {
+
+  // Always-on fallback: if the SVG path errors or the model returned
+  // an empty/garbled illustration, show the text-card so the visitor
+  // never sees an empty board.
+  const fallbackToTextCard = (reason) => {
+    if (reason) console.warn('[wonderlab] whiteboard fallback:', reason);
+    try {
       scene.clearLoading?.();
       scene.renderTextCardToBoard?.({
         question: spec.question || '',
         kid:      spec.answer?.kid || spec._reply || '',
       });
+    } catch (e) {
+      console.warn('[wonderlab] text-card fallback failed too:', e?.message || e);
+    }
+  };
+
+  try {
+    if (hasSvg) {
+      try {
+        await scene.play(spec);
+      } catch (svgErr) {
+        // SVG renderer threw — most often a malformed SVG slipped past
+        // isPaintableSvg. Fall through cleanly so the visitor still has
+        // a readable whiteboard.
+        fallbackToTextCard(svgErr?.message || 'svg render error');
+      }
+    } else {
+      fallbackToTextCard(
+        spec.illustration_svg ? 'svg present but unpaintable' : 'no svg in spec'
+      );
     }
     STATUS(spec.question || 'on the whiteboard', 'ok');
   } catch (e) {
