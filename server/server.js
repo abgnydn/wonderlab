@@ -95,6 +95,8 @@ const SCENE_SCHEMA = {
                   'title', 'text', 'circle', 'rect', 'line', 'arrow',
                   'wedge', 'blob', 'sphere', 'ring', 'box', 'drop',
                   'leaf', 'star', 'chain',
+                  // expressive state primitives
+                  'squiggle', 'tangle', 'wave', 'spiral', 'bolt', 'cluster',
                 ],
               },
               x:  { type: 'integer' }, y:  { type: 'integer' },

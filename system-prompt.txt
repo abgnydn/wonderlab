@@ -113,13 +113,31 @@ Marks — for arrows, lines, plain shapes:
 - `text` — `{ x, y, s, size: "title"|"big"|"label"|"caption" }` (centered)
 - `title` — `{ s }` (handwritten title at the top — you don't need to specify x/y)
 
+State primitives — use these to **show** what state something is in, not just color it:
+- `squiggle` — wavy line. For "string", "thread", "loose", "free-flowing".
+- `tangle` — knotted mess of crossing curves. For "knotted", "tangled", "stuck", "locked".
+- `wave` — sinusoidal line. For "sound", "signal", "ripple", "vibration".
+- `spiral` — coiled spiral. For "swirl", "vortex", "storm", "galaxy".
+- `bolt` — lightning zigzag. For "energy spike", "fast change", "shock".
+- `cluster` — group of small dots in a region. For "atoms", "particles", "swarm", "crowd".
+
+All state primitives accept `x, y, color` and most accept `label` (drawn underneath).
+
 ## How to compose
 
 1. **Lay out the picture before listing commands.** Where does the eye go first? What's left, what's right? Is there a sequence (cold → warm), a comparison (A vs B), parts of one thing (sun + air + eye), or a cycle (water cycle)?
 2. **Pick the right kinds** — pick body shapes that LOOK like the thing (sphere for egg, chain for protein, blob for liquid, ring for magnet trap).
 3. **Use the canvas** — don't cluster everything in the middle. For "before/after", put one shape near x=180 and the other near x=620 with an arrow between. For "anatomy/structure with parts", put one big shape in the center and use `arrow` or `line` commands to point at labeled spots.
-4. **Add labels** — every body shape can carry its own label, AND you can drop standalone `text` commands wherever a callout is useful.
-5. **Color the meaning** — color carries information. A "cold" wedge in `cream`, a "warm" blob in `yellow` reads better than two yellows.
+4. **Show state with state primitives, not just color.** When the question contrasts two states ("loose vs knotted", "raw vs cooked", "calm vs stormy"), the two halves of the picture should LOOK DIFFERENT — not the same shape with different colors. Drop a `squiggle` inside the "loose" side and a `tangle` inside the "knotted" side. Put a `wave` on the "noisy" side and nothing on the "still" side. The visual difference IS the teaching.
+5. **Color the meaning** — color carries information too. A "cold" wedge in `cream`, a "warm" blob in `yellow` reads better than two yellows. But color alone isn't enough — the shapes need to differ.
+
+## Anti-patterns (avoid these)
+
+- ❌ **Two of the same shape side-by-side, only color differs.** The visitor sees "circle, circle" and learns nothing visual.
+- ❌ **Adding a `text` command directly under a body shape.** Body shapes already render their own `label` underneath — putting another `text` there will overlap. Pass the label INSIDE the shape command.
+- ❌ **All shapes piled at (400, 250).** Spread them out — use the full canvas.
+- ❌ **No labels at all.** A picture without labels is decoration, not teaching.
+- ❌ **More than ~10 commands.** Crowded picture, hard to read at a glance.
 
 ## Layout patterns
 
@@ -148,43 +166,46 @@ You CAN write raw SVG markup but it's rarely worth it. Only if `draw` truly can'
 
 Three examples showing how to compose `scene.draw` for different question shapes.
 
-## Example 1 — before/after (cheese melts)
+## Example 1 — before/after WITH STATE shown by different shapes (cheese melts)
 
 Visitor: "why does cheese melt?"
 
 ```
 {
-  "level": "kid",
-  "reply": "Inside cheese are tiny pieces holding tight to each other. When you heat it, they shake hard, slip past their neighbors, and the whole thing spreads out warm.",
-  "answer": {
-    "kid":  "When you heat cheese, the tiny pieces inside start sliding past each other instead of holding tight. So the cheese spreads out and gets stretchy.",
-    "real": "Heat overcomes the weak protein-fat interactions in the casein matrix; above ~32°C the fat melts and the protein network loosens, producing flow.",
-    "glossary": [
-      { "kid_word": "tiny pieces",   "real_term": "casein proteins + fat globules" },
-      { "kid_word": "holding tight", "real_term": "protein-fat network" },
-      { "kid_word": "sliding past",  "real_term": "thermal disordering" }
-    ]
-  },
   "scene": {
     "question": "why does cheese melt?",
     "draw": [
-      { "k": "wedge", "x": 180, "y": 280, "color": "yellow", "label": "cold — pieces hold tight", "dots": 5 },
-      { "k": "arrow", "x1": 320, "y1": 280, "x2": 480, "y2": 280, "label": "heat ↑" },
-      { "k": "blob",  "x": 610, "y": 280, "color": "yellow", "label": "warm — pieces slip past", "dots": 5 }
+      { "k": "wedge", "x": 180, "y": 280, "color": "yellow", "label": "cold cheese", "dots": 5 },
+      { "k": "arrow", "x1": 310, "y1": 280, "x2": 490, "y2": 280, "label": "heat ↑" },
+      { "k": "blob",  "x": 610, "y": 280, "color": "yellow", "label": "melted, spread out" }
     ]
-  },
-  "research": {
-    "open_question": "How protein-fat networks reorganize during heating is well-mapped for cow milk; analogues in plant-based cheese are still being characterized.",
-    "benchmark": "Hugging Science protein-stability"
-  },
-  "follow_ups": [
-    "what happens if cheese gets really hot?",
-    "why doesn't all cheese melt the same way?",
-    "what makes melted cheese stretchy?"
-  ],
-  "field": "food"
+  }
 }
 ```
+
+Notice: `wedge` and `blob` are DIFFERENT shapes — the firm slice on the left, the spread blob on the right. The shape change IS the teaching. Color stays the same (it's the same cheese); the shape carries the state.
+
+## Example 1b — same idea with state primitives (cooked egg)
+
+Visitor: "why doesn't a cooked egg go back to runny?"
+
+```
+{
+  "scene": {
+    "question": "why doesn't a cooked egg go back to runny?",
+    "draw": [
+      { "k": "sphere",   "x": 180, "y": 260, "color": "cream", "label": "raw — strings loose" },
+      { "k": "squiggle", "x": 180, "y": 260 },
+      { "k": "squiggle", "x": 180, "y": 280 },
+      { "k": "arrow",    "x1": 310, "y1": 270, "x2": 490, "y2": 270, "label": "heat ↑" },
+      { "k": "sphere",   "x": 610, "y": 260, "color": "yellow", "label": "cooked — strings knotted" },
+      { "k": "tangle",   "x": 610, "y": 270 }
+    ]
+  }
+}
+```
+
+Notice: BOTH sides have a `sphere` (it's still an egg), but the INSIDE differs — `squiggle` (loose strings) on the raw side, `tangle` (knotted mess) on the cooked side. This is the right way to use state primitives: layer them ON TOP of a body shape to show what's happening inside.
 
 ## Example 2 — one thing with parts (why is the sky blue)
 

@@ -233,22 +233,123 @@ function rChain(c) {
   return `<path d="M ${x - 100} ${y + 30} Q ${x - 50} ${y - 20} ${x} ${y} Q ${x + 50} ${y + 20} ${x + 100} ${y - 25}" fill="none" stroke="${INK}" stroke-width="3"/><circle cx="${x - 100}" cy="${y + 30}" r="14" fill="${fill}" stroke="${INK}" stroke-width="3"/><circle cx="${x - 50}" cy="${y}" r="14" fill="${fill}" stroke="${INK}" stroke-width="3"/><circle cx="${x}" cy="${y}" r="14" fill="${fill}" stroke="${INK}" stroke-width="3"/><circle cx="${x + 50}" cy="${y + 3}" r="14" fill="${fill}" stroke="${INK}" stroke-width="3"/><circle cx="${x + 100}" cy="${y - 25}" r="14" fill="${fill}" stroke="${INK}" stroke-width="3"/>${labelEl}`;
 }
 
+// ---------- expressive state primitives ----------
+// These exist so the model can SHOW different states without
+// resorting to "two of the same shape, different colors". A loose
+// string (squiggle) and a knotted clump (tangle) read as different
+// things even at a glance.
+
+function rSquiggle(c) {
+  // a wavy line, useful for "string", "thread", "hair", "loose stuff"
+  const x = clamp(num(c.x, W / 2), 0, W);
+  const y = clamp(num(c.y, H / 2), 0, H);
+  const stroke = color(c.color, 'ink');
+  const label = esc((c.label || '').slice(0, 60));
+  const labelEl = label
+    ? `<text x="${x}" y="${y + 50}" font-family="Caveat, cursive" font-weight="700" font-size="22" fill="${INK}" text-anchor="middle">${label}</text>`
+    : '';
+  return `<path d="M ${x - 80} ${y} Q ${x - 50} ${y - 18} ${x - 20} ${y} T ${x + 40} ${y} T ${x + 80} ${y}" fill="none" stroke="${stroke}" stroke-width="3" stroke-linecap="round"/>${labelEl}`;
+}
+
+function rTangle(c) {
+  // a knotted mess — overlapping curves at (x, y). For "knotted",
+  // "tangled", "stuck", "clumped". Shows the visual feel of
+  // "strings that grabbed each other and won't let go".
+  const x = clamp(num(c.x, W / 2), 0, W);
+  const y = clamp(num(c.y, H / 2), 0, H);
+  const stroke = color(c.color, 'ink');
+  const label = esc((c.label || '').slice(0, 60));
+  const labelEl = label
+    ? `<text x="${x}" y="${y + 70}" font-family="Caveat, cursive" font-weight="700" font-size="22" fill="${INK}" text-anchor="middle">${label}</text>`
+    : '';
+  // four crossing curves, looks like a knot
+  return `<g stroke="${stroke}" stroke-width="3" fill="none" stroke-linecap="round">
+    <path d="M ${x - 50} ${y - 30} Q ${x} ${y - 60} ${x + 50} ${y + 20}"/>
+    <path d="M ${x - 60} ${y + 10} Q ${x + 10} ${y - 20} ${x + 50} ${y + 35}"/>
+    <path d="M ${x + 50} ${y - 30} Q ${x} ${y + 20} ${x - 50} ${y + 30}"/>
+    <path d="M ${x - 40} ${y + 35} Q ${x + 5} ${y} ${x + 60} ${y - 5}"/>
+  </g>${labelEl}`;
+}
+
+function rWave(c) {
+  // sinusoidal wave — for sound, signal, ripple, light, vibration
+  const x = clamp(num(c.x, W / 2), 0, W);
+  const y = clamp(num(c.y, H / 2), 0, H);
+  const stroke = color(c.color, 'sky');
+  const label = esc((c.label || '').slice(0, 60));
+  const labelEl = label
+    ? `<text x="${x}" y="${y + 45}" font-family="Caveat, cursive" font-weight="700" font-size="22" fill="${INK}" text-anchor="middle">${label}</text>`
+    : '';
+  // longer sine via 4 quadratic arcs
+  return `<path d="M ${x - 100} ${y} Q ${x - 75} ${y - 30} ${x - 50} ${y} T ${x} ${y} T ${x + 50} ${y} T ${x + 100} ${y}" fill="none" stroke="${stroke}" stroke-width="3" stroke-linecap="round"/>${labelEl}`;
+}
+
+function rSpiral(c) {
+  // coiled spiral — storm, swirl, vortex, galaxy
+  const x = clamp(num(c.x, W / 2), 0, W);
+  const y = clamp(num(c.y, H / 2), 0, H);
+  const stroke = color(c.color, 'sky');
+  const label = esc((c.label || '').slice(0, 60));
+  const labelEl = label
+    ? `<text x="${x}" y="${y + 75}" font-family="Caveat, cursive" font-weight="700" font-size="22" fill="${INK}" text-anchor="middle">${label}</text>`
+    : '';
+  return `<path d="M ${x} ${y} Q ${x + 15} ${y - 15} ${x + 25} ${y} Q ${x + 30} ${y + 25} ${x} ${y + 30} Q ${x - 40} ${y + 25} ${x - 40} ${y - 15} Q ${x - 35} ${y - 50} ${x + 10} ${y - 50} Q ${x + 55} ${y - 50} ${x + 60} ${y} Q ${x + 60} ${y + 60} ${x} ${y + 60}" fill="none" stroke="${stroke}" stroke-width="3" stroke-linecap="round"/>${labelEl}`;
+}
+
+function rBolt(c) {
+  // lightning zigzag — energy, sudden change, fast event
+  const x = clamp(num(c.x, W / 2), 0, W);
+  const y = clamp(num(c.y, H / 2), 0, H);
+  const stroke = color(c.color, 'yellow');
+  return `<path d="M ${x - 15} ${y - 50} L ${x + 5} ${y - 10} L ${x - 10} ${y - 5} L ${x + 15} ${y + 50}" fill="${stroke}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>`;
+}
+
+function rCluster(c) {
+  // a group of colored dots in a small region — atoms, particles, crowd
+  const x = clamp(num(c.x, W / 2), 0, W);
+  const y = clamp(num(c.y, H / 2), 0, H);
+  const n = clamp(num(c.dots, 6), 1, 12);
+  const label = esc((c.label || '').slice(0, 60));
+  const labelEl = label
+    ? `<text x="${x}" y="${y + 60}" font-family="Caveat, cursive" font-weight="700" font-size="22" fill="${INK}" text-anchor="middle">${label}</text>`
+    : '';
+  // pre-baked random-feeling positions inside a 100x60 ellipse
+  const positions = [
+    [-35, -10], [-15, 10], [10, -15], [30, 5], [-25, 18],
+    [20, 22], [0, -5], [40, -10], [-40, 5], [15, 18],
+    [-5, 22], [35, 18],
+  ];
+  let dots = '';
+  for (let i = 0; i < n && i < positions.length; i++) {
+    const [dx, dy] = positions[i];
+    dots += `<circle cx="${x + dx}" cy="${y + dy}" r="8" fill="${DOT_COLORS[i % DOT_COLORS.length]}" stroke="${INK}" stroke-width="2"/>`;
+  }
+  return `${dots}${labelEl}`;
+}
+
 const RENDERERS = {
-  title:  rTitle,
-  text:   rText,
-  circle: rCircle,
-  rect:   rRect,
-  line:   rLine,
-  arrow:  rArrow,
-  wedge:  rWedge,
-  blob:   rBlob,
-  sphere: rSphere,
-  ring:   rRing,
-  box:    rBox,
-  drop:   rDrop,
-  leaf:   rLeaf,
-  star:   rStar,
-  chain:  rChain,
+  title:    rTitle,
+  text:     rText,
+  circle:   rCircle,
+  rect:     rRect,
+  line:     rLine,
+  arrow:    rArrow,
+  wedge:    rWedge,
+  blob:     rBlob,
+  sphere:   rSphere,
+  ring:     rRing,
+  box:      rBox,
+  drop:     rDrop,
+  leaf:     rLeaf,
+  star:     rStar,
+  chain:    rChain,
+  // expressive state primitives — show the state, not just color it
+  squiggle: rSquiggle,
+  tangle:   rTangle,
+  wave:     rWave,
+  spiral:   rSpiral,
+  bolt:     rBolt,
+  cluster:  rCluster,
 };
 
 export const DRAW_KINDS = Object.keys(RENDERERS);
