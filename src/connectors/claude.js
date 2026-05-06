@@ -7,7 +7,7 @@
 // =============================================================
 
 import { makeReplyExtractor, parseFinalJson } from './extract.js';
-import { getSystemPrompt, NO_IMAGE_DIRECTIVE, JSON_ONLY_DIRECTIVE } from './system-prompt.js';
+import { getSystemPrompt, NO_IMAGE_DIRECTIVE, JSON_ONLY_DIRECTIVE, languageDirective } from './system-prompt.js';
 
 const ENDPOINT = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-sonnet-4-6';   // good balance for SVG quality + speed
@@ -47,7 +47,7 @@ export const claudeConnector = {
     }
   },
 
-  async ask(question, { withImage, key, model, onReply, onDone, onError }) {
+  async ask(question, { withImage, key, model, language, onReply, onDone, onError }) {
     if (!key) return onError(new Error('add your Anthropic API key in settings'));
     const t0 = Date.now();
     let system;
@@ -56,6 +56,7 @@ export const claudeConnector = {
 
     const userMsg = (question || '')
       + JSON_ONLY_DIRECTIVE
+      + languageDirective(language)
       + (withImage === false ? NO_IMAGE_DIRECTIVE : '');
 
     let response;

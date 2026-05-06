@@ -25,7 +25,8 @@ export const CONNECTORS = {
 //     keys:     { claude: 'sk-…', gemini: 'AI…' },
 //     models:   { claude: '…', gemini: '…', webllm: '…', lmstudio: '…' },
 //     lmstudioUrl: 'http://…',
-//     drawIllustrations: true | false (per-backend default if unset) }
+//     drawIllustrations: true | false (per-backend default if unset),
+//     language: 'auto' | 'en' | 'tr' | … }
 const STORE_KEY = 'wonderlab.connector.settings.v1';
 
 const defaultSettings = () => ({
@@ -34,6 +35,7 @@ const defaultSettings = () => ({
   models:  {},
   lmstudioUrl: 'http://localhost:1234/v1/chat/completions',
   drawIllustrations: null, // null → fall back to the connector's default
+  language: 'auto',        // 'auto' resolves from navigator.language
 });
 
 export function loadSettings() {
@@ -71,6 +73,7 @@ export async function ask(question, settings, callbacks) {
     key:    settings.keys[conn.id] || '',
     model:  settings.models[conn.id] || '',
     url:    conn.id === 'lmstudio' ? settings.lmstudioUrl : undefined,
+    language: settings.language || 'auto',
   };
   return conn.ask(question, { ...params, ...callbacks });
 }

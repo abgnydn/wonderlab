@@ -9,7 +9,7 @@
 // =============================================================
 
 import { makeReplyExtractor, parseFinalJson } from './extract.js';
-import { getSystemPrompt, NO_IMAGE_DIRECTIVE, JSON_ONLY_DIRECTIVE } from './system-prompt.js';
+import { getSystemPrompt, NO_IMAGE_DIRECTIVE, JSON_ONLY_DIRECTIVE, languageDirective } from './system-prompt.js';
 import { WEBLLM_MODELS } from '../device-detect.js';
 
 const WEBLLM_CDN = 'https://esm.run/@mlc-ai/web-llm';
@@ -153,7 +153,7 @@ export const webllmConnector = {
   },
 
   async ask(question, {
-    withImage, model,
+    withImage, model, language,
     onReply, onDone, onError,
     onProgress,                         // optional: { progress, text } during model download
   }) {
@@ -175,6 +175,7 @@ export const webllmConnector = {
 
     const userMsg = (question || '')
       + JSON_ONLY_DIRECTIVE
+      + languageDirective(language)
       + (withImage === false ? NO_IMAGE_DIRECTIVE : '');
 
     const extract = makeReplyExtractor(onReply);

@@ -167,6 +167,39 @@ const NO_IMAGE_DIRECTIVE =
   '\n\n[mode: text-only — do NOT include scene.illustration_svg. Skip the SVG entirely; ' +
   'fill in everything else as usual: reply, answer.kid, answer.real, scene.question, research.*]';
 
+// Language directive — mirrors the client-side one in src/connectors/system-prompt.js.
+// English ("en" or empty/auto-resolved-as-English) gets no directive; everything else
+// asks iris to translate every visible field while keeping research.* and benchmark
+// in English so the backend resolver still works.
+const NATIVE_NAME = {
+  en:'English', tr:'Türkçe', es:'Español', pt:'Português', fr:'Français',
+  de:'Deutsch', it:'Italiano', nl:'Nederlands', sv:'Svenska', pl:'Polski',
+  ru:'Русский', uk:'Українська', ar:'العربية', fa:'فارسی', hi:'हिन्दी',
+  bn:'বাংলা', ur:'اردو', id:'Bahasa Indonesia', vi:'Tiếng Việt', th:'ไทย',
+  ja:'日本語', ko:'한국어', zh:'中文',
+};
+const ENGLISH_NAME = {
+  en:'English', tr:'Turkish', es:'Spanish', pt:'Portuguese', fr:'French',
+  de:'German', it:'Italian', nl:'Dutch', sv:'Swedish', pl:'Polish',
+  ru:'Russian', uk:'Ukrainian', ar:'Arabic', fa:'Persian', hi:'Hindi',
+  bn:'Bengali', ur:'Urdu', id:'Indonesian', vi:'Vietnamese', th:'Thai',
+  ja:'Japanese', ko:'Korean', zh:'Chinese',
+};
+function languageDirective(code) {
+  if (!code || code === 'auto') code = 'en';
+  if (code === 'en' || !NATIVE_NAME[code]) return '';
+  const native = NATIVE_NAME[code];
+  const english = ENGLISH_NAME[code];
+  return [
+    '',
+    '',
+    `[Visitor language: ${english} (${native}, code "${code}").`,
+    `Reply ENTIRELY in ${english} for every visible field — reply, answer.kid, scene.question, follow_ups, and any text inside the SVG (including the title at the top of the picture).`,
+    `The kid-words rule still applies in ${english}: avoid the ${english} equivalents of the banned technical terms; swap them for everyday metaphors a 7-year-old in ${english} would recognize.`,
+    `Keep these in English so the backend mapping still works: answer.real, answer.glossary.real_term, research.open_question, research.benchmark, and the field tag.]`,
+  ].join('\n');
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js':   'text/javascript; charset=utf-8',
@@ -248,10 +281,11 @@ function makeReplyExtractor(onDelta) {
 // Generic OpenAI-compatible streaming call. Used by both gemini and
 // lmstudio backends — they only differ in URL, auth, and model name.
 // =============================================================
-async function askOpenAICompat({ url, model, headers, question, label, withImage, onReply, onDone, onError }) {
+async function askOpenAICompat({ url, model, headers, question, label, withImage, language, onReply, onDone, onError }) {
   const t0 = Date.now();
   const userMsg = question
     + '\n\nReply with a single JSON object matching the contract. No prose, no markdown fences. /no_think'
+    + languageDirective(language)
     + (withImage === false ? NO_IMAGE_DIRECTIVE : '');
   const body = {
     model,
@@ -335,7 +369,7 @@ async function askOpenAICompat({ url, model, headers, question, label, withImage
   });
 }
 
-async function askGeminiStreaming(question, { withImage, ...callbacks }) {
+async function askGeminiStreaming(question, { withImage, language, ...callbacks }) {
   if (!GEMINI_KEY) {
     return callbacks.onError(new Error(
       'Gemini backend needs GEMINI_API_KEY. Get one (free, no card) at https://aistudio.google.com/apikey'
@@ -348,11 +382,12 @@ async function askGeminiStreaming(question, { withImage, ...callbacks }) {
     question,
     label:   'Gemini',
     withImage,
+    language,
     ...callbacks,
   });
 }
 
-async function askLmStudioStreamingNew(question, { withImage, ...callbacks }) {
+async function askLmStudioStreamingNew(question, { withImage, language, ...callbacks }) {
   return askOpenAICompat({
     url:     LMSTUDIO_URL,
     model:   MODEL,
@@ -360,11 +395,12 @@ async function askLmStudioStreamingNew(question, { withImage, ...callbacks }) {
     question,
     label:   'LM Studio',
     withImage,
+    language,
     ...callbacks,
   });
 }
 
-async function askCerebrasStreaming(question, { withImage, ...callbacks }) {
+async function askCerebrasStreaming(question, { withImage, language, ...callbacks }) {
   if (!CEREBRAS_KEY) {
     return callbacks.onError(new Error(
       'Cerebras backend needs CEREBRAS_API_KEY. Free, no card: https://cloud.cerebras.ai/'
@@ -377,15 +413,145 @@ async function askCerebrasStreaming(question, { withImage, ...callbacks }) {
     question,
     label:   'Cerebras',
     withImage,
+    language,
     ...callbacks,
   });
 }
 
 // (LM Studio backend uses askOpenAICompat above via askLmStudioStreamingNew)
 
-function askClaudeStreaming(question, { withImage, onReply, onDone, onError }) {
+// =============================================================
+// askClaudeSDK — Anthropic SDK direct, with prompt caching on the
+// system prompt. About 5× faster than the CLI subprocess because
+// it skips the ~3-5s CLI init on every call. Same model, same cost,
+// and (after the first call in a 5-minute window) much cheaper —
+// the cached system prompt costs 1/10 the input tokens to read.
+//
+// The SDK is loaded via dynamic import so the server still boots
+// without it installed. We pick this path automatically when
+// ANTHROPIC_API_KEY is set; otherwise we fall through to the CLI
+// (askClaudeStreaming below), which uses Claude Code's OAuth and
+// needs no key.
+// =============================================================
+let _sdkClient = null;        // cached Anthropic() client
+let _sdkResolved = false;     // we've tried to load the SDK at least once
+
+async function getAnthropicClient() {
+  if (_sdkResolved) return _sdkClient;
+  _sdkResolved = true;
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  try {
+    const mod = await import('@anthropic-ai/sdk');
+    const Anthropic = mod.default || mod.Anthropic;
+    _sdkClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    return _sdkClient;
+  } catch (e) {
+    console.warn('[server] @anthropic-ai/sdk not installed (run `npm i`); falling back to claude CLI');
+    return null;
+  }
+}
+
+// Map our short MODEL alias to the SDK's full model id. The CLI's
+// `--model sonnet` / `haiku` aliases don't exist on the API surface.
+function sdkModelId(alias) {
+  const a = (alias || '').toLowerCase();
+  if (a.includes('opus'))   return 'claude-opus-4-7';
+  if (a.includes('haiku'))  return 'claude-haiku-4-5';
+  if (a.includes('sonnet')) return 'claude-sonnet-4-6';
+  // already a full model id, pass through
+  return alias || 'claude-sonnet-4-6';
+}
+
+async function askClaudeSDK(question, { withImage, language, onReply, onDone, onError }) {
+  const client = await getAnthropicClient();
+  if (!client) return null;       // signal "fall back to CLI"
+  const t0 = Date.now();
   const schema = withImage === false ? SCENE_SCHEMA_NO_IMAGE : SCENE_SCHEMA;
-  const userMsg = withImage === false ? (question + NO_IMAGE_DIRECTIVE) : question;
+  const userMsg =
+    question
+    + languageDirective(language)
+    + (withImage === false ? NO_IMAGE_DIRECTIVE : '');
+
+  // Single tool that mirrors the JSON-schema route the CLI uses. The
+  // model fills in the tool's input via streaming input_json_delta —
+  // same wire shape as the CLI path, so the same extractor works.
+  const tool = {
+    name: 'StructuredOutput',
+    description: 'Return the SceneSpec as a single structured object.',
+    input_schema: schema,
+  };
+
+  const extract = makeReplyExtractor(onReply);
+  let finalSpec = null;
+  let inputUsage = null, outputUsage = null;
+  try {
+    const stream = client.messages.stream({
+      model: sdkModelId(MODEL),
+      max_tokens: withImage === false ? 2048 : 8192,
+      // prompt-cache the system prompt so subsequent calls in a 5-min
+      // window read it for 1/10 the input-token cost.
+      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      tools: [tool],
+      tool_choice: { type: 'tool', name: 'StructuredOutput' },
+      messages: [{ role: 'user', content: userMsg }],
+    });
+
+    // Pipe streaming deltas to the same extractor the CLI path uses.
+    // The SDK exposes raw stream events through .on('streamEvent').
+    stream.on('streamEvent', (evt) => {
+      if (!evt) return;
+      if (evt.type === 'content_block_delta' && evt.delta) {
+        if (evt.delta.type === 'input_json_delta' && typeof evt.delta.partial_json === 'string') {
+          extract(evt.delta.partial_json);
+        } else if (evt.delta.type === 'text_delta' && typeof evt.delta.text === 'string') {
+          extract(evt.delta.text);
+        }
+      }
+    });
+
+    const finalMessage = await stream.finalMessage();
+    inputUsage  = finalMessage?.usage?.input_tokens;
+    outputUsage = finalMessage?.usage?.output_tokens;
+    // pull the tool_use block — that's our SceneSpec
+    for (const block of finalMessage?.content || []) {
+      if (block.type === 'tool_use' && block.name === 'StructuredOutput' && block.input) {
+        finalSpec = block.input;
+        break;
+      }
+    }
+  } catch (e) {
+    return onError(new Error(`Anthropic SDK error: ${e?.message || e}`));
+  }
+
+  if (!finalSpec) {
+    return onError(new Error('Anthropic SDK returned no structured output'));
+  }
+  onDone({
+    spec: finalSpec,
+    meta: {
+      duration_ms: Date.now() - t0,
+      model: sdkModelId(MODEL),
+      backend: 'claude-sdk',
+      usage: { input_tokens: inputUsage, output_tokens: outputUsage },
+    },
+  });
+  return true;       // handled
+}
+
+// Try the SDK path first (fast, prompt-cached). If it returns null, the
+// SDK isn't usable (no key or no install) — fall through to the CLI.
+async function askClaudeWithFallback(question, opts) {
+  const handled = await askClaudeSDK(question, opts);
+  if (handled) return;
+  return askClaudeStreaming(question, opts);
+}
+
+function askClaudeStreaming(question, { withImage, language, onReply, onDone, onError }) {
+  const schema = withImage === false ? SCENE_SCHEMA_NO_IMAGE : SCENE_SCHEMA;
+  const userMsg =
+    question
+    + languageDirective(language)
+    + (withImage === false ? NO_IMAGE_DIRECTIVE : '');
   const args = [
     '-p',
     '--no-session-persistence',
@@ -513,12 +679,13 @@ function readBody(req) {
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/api/ask') {
-    let question, withImage = true;
+    let question, withImage = true, language = 'en';
     try {
       const body = await readBody(req);
       const parsed = JSON.parse(body || '{}');
       question  = parsed.question;
       withImage = parsed.withImage !== false;     // default true; only false disables it
+      language  = (typeof parsed.language === 'string' && parsed.language) || 'en';
       if (!question || typeof question !== 'string') {
         res.writeHead(400, { 'content-type': 'application/json' });
         return res.end(JSON.stringify({ error: 'missing question' }));
@@ -528,7 +695,7 @@ const server = http.createServer(async (req, res) => {
       return res.end(JSON.stringify({ error: e.message }));
     }
 
-    console.log(`[ask]${withImage ? '' : ' [no-image]'} ${question.slice(0, 80)}`);
+    console.log(`[ask]${withImage ? '' : ' [no-image]'}${language && language !== 'en' ? ` [${language}]` : ''} ${question.slice(0, 80)}`);
     res.writeHead(200, {
       'content-type':  'text/event-stream; charset=utf-8',
       'cache-control': 'no-cache, no-transform',
@@ -548,12 +715,18 @@ const server = http.createServer(async (req, res) => {
     const cleanup = () => clearInterval(heartbeat);
     req.on('close', cleanup);
 
-    const ask = BACKEND === 'gemini'   ? askGeminiStreaming
-              : BACKEND === 'cerebras' ? askCerebrasStreaming
-              : BACKEND === 'lmstudio' ? askLmStudioStreamingNew
-              :                          askClaudeStreaming;
-    ask(question, {
+    // Pick the asker. For the default "claude" backend we try the SDK
+    // first when ANTHROPIC_API_KEY is set + @anthropic-ai/sdk installed
+    // (~5× faster cold-start than the CLI subprocess + prompt caching).
+    // If that's not available, we fall back to the CLI (Claude Code OAuth).
+    const askPrimary = BACKEND === 'gemini'   ? askGeminiStreaming
+                     : BACKEND === 'cerebras' ? askCerebrasStreaming
+                     : BACKEND === 'lmstudio' ? askLmStudioStreamingNew
+                     :                          askClaudeWithFallback;
+
+    askPrimary(question, {
       withImage,
+      language,
       onReply: (delta) => send('reply', { text: delta }),
       onDone:  (result) => {
         cleanup();

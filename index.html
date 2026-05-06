@@ -1250,6 +1250,18 @@
   .benchmark-chip__link:hover  { background: var(--sky-deep); color: white; transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink); }
   .benchmark-chip__link:active { transform: translate(1px, 1px); box-shadow: 0 0 0 var(--ink); }
   .benchmark-chip__link span   { font-size: 0.78em; opacity: 0.85; }
+  .benchmark-chip__note {
+    flex-basis: 100%;
+    color: var(--ink-soft);
+    font-style: italic;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    margin-top: 0.1rem;
+  }
+  @media (max-width: 600px) {
+    /* on mobile we keep the note short and put it after the link inline */
+    .benchmark-chip__note { font-size: 0.74rem; }
+  }
 
   /* connect hint — first-time nudge above the answer card / chat input.
      Only rendered when the active backend needs a key and the user hasn't
@@ -2952,6 +2964,16 @@
         <div class="settings-device" id="settings-device-line">checking…</div>
         <div class="settings-recommend" id="settings-recommend"></div>
         <button type="button" id="settings-apply-rec" class="settings-action settings-action--primary">use recommendation</button>
+      </div>
+
+      <!-- LANGUAGE PICKER -->
+      <div class="settings-card">
+        <div class="settings-card__title">language · iris speaks…</div>
+        <div class="settings-field">
+          <label for="settings-language">iris will reply in</label>
+          <select id="settings-language"></select>
+          <div class="settings-field__hint">the whole answer translates — including labels in the picture. the technical terms behind the scenes stay in english so the benchmark links still work.</div>
+        </div>
       </div>
 
       <!-- BACKEND PICKER -->

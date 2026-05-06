@@ -34,14 +34,14 @@ export const localServerConnector = {
       : { ok: false, error: 'no /api/ask route — start `node server/server.js` first' };
   },
 
-  async ask(question, { withImage, onReply, onDone, onError }) {
+  async ask(question, { withImage, language, onReply, onDone, onError }) {
     const t0 = Date.now();
     let response;
     try {
       response = await fetch(ENDPOINT, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ question, withImage }),
+        body: JSON.stringify({ question, withImage, language }),
       });
     } catch (e) {
       return onError(new Error(`local server unreachable: ${e.message}`));

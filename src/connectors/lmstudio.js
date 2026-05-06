@@ -11,7 +11,7 @@
 
 import { makeReplyExtractor, parseFinalJson } from './extract.js';
 import { readOpenAISSE } from './gemini.js';
-import { getSystemPrompt, NO_IMAGE_DIRECTIVE, JSON_ONLY_DIRECTIVE } from './system-prompt.js';
+import { getSystemPrompt, NO_IMAGE_DIRECTIVE, JSON_ONLY_DIRECTIVE, languageDirective } from './system-prompt.js';
 
 const DEFAULT_URL   = 'http://localhost:1234/v1/chat/completions';
 const DEFAULT_MODEL = 'qwen3-14b-mlx';
@@ -51,7 +51,7 @@ export const lmstudioConnector = {
     }
   },
 
-  async ask(question, { withImage, url, model, onReply, onDone, onError }) {
+  async ask(question, { withImage, url, model, language, onReply, onDone, onError }) {
     const u = (url || DEFAULT_URL);
     const t0 = Date.now();
     let system;
@@ -60,6 +60,7 @@ export const lmstudioConnector = {
 
     const userMsg = (question || '')
       + JSON_ONLY_DIRECTIVE
+      + languageDirective(language)
       + (withImage === false ? NO_IMAGE_DIRECTIVE : '');
 
     let response;

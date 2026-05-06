@@ -26,6 +26,7 @@ import {
   CONNECTORS, loadSettings, saveSettings,
   getActiveConnector, ask as connectorAsk, resolveDrawIllustrations,
 } from './connectors/index.js';
+import { LANGUAGES, resolveLanguage } from './connectors/system-prompt.js';
 import {
   detectCapabilities, recommend, describeCapabilities, WEBLLM_MODELS,
 } from './device-detect.js';
@@ -132,11 +133,19 @@ function paintBenchmarkChip(name) {
   const b = resolveBenchmark(name);
   if (!b) { host.hidden = true; host.innerHTML = ''; return; }
   host.hidden = false;
+  // The note (when present) goes on the link's title so hovering reveals
+  // what the benchmark *is* in plain words. Mobile gets the same info on
+  // long-press via aria-label.
+  const tip = b.note ? ` title="${escapeAttr(b.note)}" aria-label="${escapeAttr(b.label + ' — ' + b.note)}"` : '';
+  const noteLine = b.note
+    ? `<span class="benchmark-chip__note">${escapeHTML(b.note)}</span>`
+    : '';
   host.innerHTML = `
     <span class="benchmark-chip__lede">tied to a real challenge:</span>
-    <a class="benchmark-chip__link" href="${escapeAttr(b.url)}" target="_blank" rel="noopener">
+    <a class="benchmark-chip__link" href="${escapeAttr(b.url)}" target="_blank" rel="noopener"${tip}>
       ${escapeHTML(b.label)} <span aria-hidden="true">↗</span>
     </a>
+    ${noteLine}
   `;
 }
 
@@ -1013,6 +1022,25 @@ function rebuildSettingsContents() {
     musicT.onchange = () => {
       setMusicOn(musicT.checked);
       audio.music?.(musicT.checked);
+    };
+  }
+
+  // language picker — populate, mark current, persist on change
+  const langSel = $('settings-language');
+  if (langSel) {
+    const cur = settings.language || 'auto';
+    // build the auto label so the visitor sees what 'auto' would resolve to
+    const resolvedAuto = resolveLanguage('auto');
+    const autoNative = LANGUAGES.find(l => l.code === resolvedAuto)?.label || 'English';
+    langSel.innerHTML = LANGUAGES.map(l => {
+      const label = l.code === 'auto' ? `${l.label} → ${autoNative}` : l.label;
+      const sel = l.code === cur ? ' selected' : '';
+      return `<option value="${l.code}"${sel}>${escapeHTML(label)}</option>`;
+    }).join('');
+    langSel.onchange = () => {
+      const s = loadSettings();
+      s.language = langSel.value;
+      saveSettings(s);
     };
   }
 
