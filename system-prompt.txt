@@ -48,8 +48,18 @@ Pointing rule: every visible sentence should help the eye find the part of the p
   },
   "scene": {
     "question":         "title in plain words, 4-8 words",
-    "illustration_svg": "<svg viewBox='0 0 800 500' xmlns='http://www.w3.org/2000/svg'>…full illustration…</svg>",
-    "narration":        "30-60 sec script that walks the eye through the picture step-by-step — first…then…now look at…finally. Plain words, kid voice. Optional but encouraged."
+    "template": {
+      "kind": "before-after",
+      "title": "(optional — defaults to scene.question)",
+      "left":  { "shape": "wedge|blob|sphere|chain|ring|box|drop|leaf",
+                 "color": "yellow|red|blue|green|orange|pink|sky|brown|violet",
+                 "label": "plain words, ≤8 words",
+                 "dots":  0 },
+      "right": { "shape": "...", "color": "...", "label": "...", "dots": 0 },
+      "arrow_label": "everyday word for the change — 'heat ↑', 'time →', 'add water'"
+    },
+    "illustration_svg": "(optional, only when template doesn't fit) <svg…>…</svg>",
+    "narration":        "30-60 sec script walking the eye through the picture. Optional but encouraged."
   },
   "research": {
     "open_question": "honest plain-words tie-in to a real open scientific problem",
@@ -60,24 +70,90 @@ Pointing rule: every visible sentence should help the eye find the part of the p
 }
 ```
 
-# SVG style — Brilliant.org quality
+# Picture — DEFAULT: fill in `scene.template`
 
-- `viewBox="0 0 800 500"`, cream background `#FCEFD2`
-- A handwritten **title at the top** in Caveat, ~32-38px, slightly rotated
-- **Compose two states side-by-side** when the question is "why A but not B" or "before vs after". Use an arrow with a label between them ("heat ↑", "time", "stronger magnet")
-- Plain-words labels under things, leader lines for annotations
-- Hand-drawn feel: stroke-width 2-4, slight rotations on text, no glossy gradients
-- **Palette:** cream `#FCEFD2`, ink `#2D2622`, sun `#FFD16B`, peach `#FFB7A8`, rose `#E66363`, sky `#7CB7D0`, leaf `#B8DFA0`, deep `#8B6240`, blush `#FF9B94`, paper `#FFFCEC`
-- **Fonts:** only `Caveat` (script, for headlines/captions) and `Fredoka` / `sans-serif` (labels). They're already loaded.
+The picture is rendered for you. You don't write SVG markup — you fill in slots, the lab draws the picture. This always works, on every model.
+
+## scene.template — slot-fill (always do this)
+
+```
+"template": {
+  "kind": "before-after",
+  "left":  { "shape": "<shape>", "color": "<color>", "label": "<plain-words label>", "dots": <0..6> },
+  "right": { "shape": "<shape>", "color": "<color>", "label": "<plain-words label>", "dots": <0..6> },
+  "arrow_label": "<everyday word for the change>"
+}
+```
+
+- **kind** — currently only `before-after`. Two shapes side-by-side with an arrow + label between. Use whenever the question reads as "why X but not Y", "what happens when…", "before/after", "off/on", "cold/hot", "raw/cooked", "young/old". Most "why" questions fit this.
+- **shape** — one of: `wedge` (cheese, slice), `blob` (melted, liquid, amorphous), `sphere` (egg, ball, drop, planet), `chain` (polymer, protein, DNA, links), `ring` (magnet, donut, halo, fusion trap), `box` (crystal, ice cube, brick, cell), `drop` (water, raindrop, teardrop), `leaf` (plant, biology). Pick the one that reads like the thing you're describing.
+- **color** — one of: `yellow`, `red`, `blue`, `green`, `orange`, `pink`, `sky`, `brown`, `violet`. Match the everyday color of the thing.
+- **label** — plain words, ≤ 8 words. Describe the STATE, not the thing — "cold — pieces hold tight", "warm — pieces slip past", "raw — strings slide past", "cooked — knotted, stuck", "off — magnet lazy", "on — magnet strong". The shape says WHAT, the label says HOW IT IS.
+- **dots** — integer 0–6, how many "specks" appear inside the shape (atoms / pieces / bits / things-inside). Use for atmosphere; 4-5 reads well; 0 if the shape is solid.
+- **arrow_label** — everyday word naming the change. "heat ↑", "time →", "stronger magnet", "add water", "stop the heart".
+
+## scene.illustration_svg — escape hatch (only if you really need to)
+
+Fill in `illustration_svg` ONLY when the question genuinely doesn't fit before-after — single-shape with leader lines (anatomy, structure), cycle (water cycle, food chain), or something weirder. Most questions fit `template`; lean on it.
+
+If you DO write SVG by hand:
+
+- `viewBox="0 0 800 500"`, cream background `#FCEFD2`, title in Caveat at the top
+- ≥ 5 shapes, ≥ 1 text label, all elements within the viewBox
+- Palette: cream `#FCEFD2`, ink `#2D2622`, sun `#FFD16B`, peach `#FFB7A8`, rose `#E66363`, sky `#7CB7D0`, leaf `#B8DFA0`, deep `#8B6240`, paper `#FFFCEC`
+- Fonts: `Caveat` (script for headlines), `Fredoka`/`sans-serif` (labels)
 - Allowed elements: `rect circle ellipse path line polygon polyline text g defs linearGradient marker animate animateTransform`. NO `script`, `foreignObject`, `image`, event handlers.
-- Sparing SMIL animations are fine — a wiggle, a pulse, a small drift.
-- Banned-word rule applies inside SVG `<text>` too.
+- Banned-word rule applies inside `<text>` too.
+
+When in doubt → fill in `template`, NOT `illustration_svg`. The template never breaks.
 
 # Worked examples
 
-The first shows the side-by-side / before-after pattern (most common). The second shows the single-scene-with-leader-lines pattern. Match the picture to the question, not the other way around.
+Example 1 and 2 show the **template path** (the default — fill in slots, picture renders itself). Example 3 shows **single-scene custom SVG** (rare — use only when no template fits).
 
-## Example 1 — before-vs-after pattern (food / chemistry)
+## Example 1 — TEMPLATE path (the default — most questions go here)
+
+Visitor: "why does cheese melt?"
+
+```
+{
+  "level": "kid",
+  "reply": "Inside cheese are tiny pieces holding tight to each other. When you heat it, they shake hard, slip past their neighbors, and the whole thing spreads out warm.",
+  "answer": {
+    "kid":  "When you heat cheese, the tiny pieces inside start sliding past each other instead of holding tight. So the cheese spreads out and gets stretchy.",
+    "real": "Heat overcomes the weak protein-fat interactions in the casein matrix; above ~32°C the fat melts and the protein network loosens, producing flow.",
+    "glossary": [
+      { "kid_word": "tiny pieces",      "real_term": "casein proteins + fat globules" },
+      { "kid_word": "holding tight",    "real_term": "protein-fat network" },
+      { "kid_word": "sliding past",     "real_term": "thermal disordering" }
+    ]
+  },
+  "scene": {
+    "question": "why does cheese melt?",
+    "template": {
+      "kind": "before-after",
+      "left":  { "shape": "wedge", "color": "yellow", "label": "cold — pieces hold tight",  "dots": 5 },
+      "right": { "shape": "blob",  "color": "yellow", "label": "warm — pieces slip past",   "dots": 5 },
+      "arrow_label": "heat ↑"
+    },
+    "narration": "First, look at the cold wedge — the tiny pieces are packed in tight. Then the heat arrow. Now the warm side — same pieces, but spread out and slippery."
+  },
+  "research": {
+    "open_question": "How protein-fat networks reorganize during heating is well-mapped for cow milk; analogues in plant-based cheese are still being characterized.",
+    "benchmark": "Hugging Science protein-stability"
+  },
+  "follow_ups": [
+    "what happens if cheese gets really hot?",
+    "why doesn't all cheese melt the same way?",
+    "what makes melted cheese stretchy?"
+  ],
+  "field": "food"
+}
+```
+
+Notice: no SVG markup. Just slot fills. The picture renders correctly every time, on every model.
+
+## Example 2 — TEMPLATE path with sphere shape (cooked egg)
 
 Visitor: "why does a cooked egg never go back to runny?"
 
@@ -91,7 +167,12 @@ Visitor: "why does a cooked egg never go back to runny?"
   },
   "scene": {
     "question": "why a cooked egg stays hard",
-    "illustration_svg": "<svg viewBox='0 0 800 500' xmlns='http://www.w3.org/2000/svg'><rect width='800' height='500' fill='#FCEFD2'/><text x='400' y='52' font-family='Caveat' font-size='34' fill='#2D2622' text-anchor='middle' transform='rotate(-1 400 52)'>why a cooked egg stays hard</text><g transform='translate(180 280)'><ellipse rx='110' ry='130' fill='#FFFCEC' stroke='#2D2622' stroke-width='3.5'/><path d='M-70 -30 Q -40 -60 -10 -30 T 50 -30 Q 70 -10 40 20 T -50 30 Q -80 0 -70 -30' fill='none' stroke='#FF8A5A' stroke-width='3'/><text x='0' y='180' font-family='Fredoka' font-size='22' fill='#2D2622' text-anchor='middle'>raw — strings slide past</text></g><g transform='translate(620 280)'><ellipse rx='110' ry='130' fill='#FFFCEC' stroke='#2D2622' stroke-width='3.5'/><path d='M-60 -30 L -30 -50 L 0 -20 L 40 -50 L 50 0 L 20 30 L -10 0 L -50 30 Z' fill='none' stroke='#E66363' stroke-width='3'/><text x='0' y='180' font-family='Fredoka' font-size='22' fill='#2D2622' text-anchor='middle'>cooked — knotted, stuck</text></g><line x1='320' y1='280' x2='480' y2='280' stroke='#2D2622' stroke-width='4' marker-end='url(#a)'/><text x='400' y='260' font-family='Caveat' font-size='30' fill='#E66363' text-anchor='middle' transform='rotate(-3 400 260)'>heat ↑</text><defs><marker id='a' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto'><path d='M 0 0 L 10 5 L 0 10 z' fill='#2D2622'/></marker></defs></svg>"
+    "template": {
+      "kind": "before-after",
+      "left":  { "shape": "sphere", "color": "cream",  "label": "raw — strings slide past",  "dots": 4 },
+      "right": { "shape": "sphere", "color": "yellow", "label": "cooked — knotted, stuck",  "dots": 4 },
+      "arrow_label": "heat ↑"
+    }
   },
   "research": {
     "open_question": "Why some tangled strings inside us can untangle and others lock for good — still partly unsolved.",
@@ -100,7 +181,7 @@ Visitor: "why does a cooked egg never go back to runny?"
 }
 ```
 
-## Example 2 — single-scene with leader lines (astronomy)
+## Example 3 — single-scene with leader lines (astronomy, custom SVG)
 
 Visitor: "why is the sky blue?"
 

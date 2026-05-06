@@ -27,6 +27,7 @@ import {
   getActiveConnector, ask as connectorAsk, resolveDrawIllustrations,
 } from './connectors/index.js';
 import { LANGUAGES, resolveLanguage } from './connectors/system-prompt.js';
+import { renderTemplate, isValidTemplate } from './templates/index.js';
 import {
   detectCapabilities, recommend, describeCapabilities, WEBLLM_MODELS,
 } from './device-detect.js';
@@ -50,16 +51,47 @@ let zoomed = false;
 // -----------------------------------------------------------
 function asSceneSpec(reply) {
   const s = reply.spec;
+  // Picture resolution order: a custom illustration_svg (if present and
+  // paintable) wins because it's tailored. Otherwise we render the
+  // model's `template` slot-fills procedurally — that path is the
+  // reliability guarantee for small / fast models. Either way, by the
+  // time loadSpec sees `illustration_svg`, it's a proper SVG string we
+  // built ourselves OR an SVG string the model wrote.
+  const customSvg = s.scene?.illustration_svg || '';
+  const template  = s.scene?.template || null;
+
+  // Try the model's SVG first if it looks well-formed enough; otherwise
+  // build from the template. We do the SVG check up front so the
+  // template auto-fills in when the model returned an empty / garbled
+  // <svg/> shell.
+  let illustration = '';
+  if (customSvg && isPaintableSvg(customSvg)) {
+    illustration = customSvg;
+  } else if (template && isValidTemplate(template)) {
+    // attach the title to the template if missing — the SVG title bar
+    // reads from this field
+    const t = { ...template };
+    if (!t.title && s.scene?.question) t.title = s.scene.question;
+    const built = renderTemplate(t);
+    if (built) illustration = built;
+  } else if (customSvg) {
+    // model wrote SVG but it didn't pass the paintable gate — keep it
+    // around so the loadSpec layer can decide (it'll fall through to
+    // text-card)
+    illustration = customSvg;
+  }
+
   return {
     id: 'live',
     question:         s.scene?.question || '',
     answer:           s.answer,
-    illustration_svg: s.scene?.illustration_svg || '',
+    illustration_svg: illustration,
     _reply:    s.reply,
     _level:    s.level,
     _research: s.research,
     _follow_ups: Array.isArray(s.follow_ups) ? s.follow_ups : [],
     _field:    typeof s.field === 'string' ? s.field : null,
+    _template: template,
     _meta:     reply.meta,
   };
 }

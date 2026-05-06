@@ -76,9 +76,38 @@ const SCENE_SCHEMA = {
     },
     scene: {
       type: 'object',
-      required: ['question', 'illustration_svg'],
+      required: ['question'],
       properties: {
-        question:         { type: 'string' },
+        question: { type: 'string' },
+        // Preferred picture path: model fills slots, we render. Always works.
+        template: {
+          type: 'object',
+          description: 'Pick a layout + fill slots. Always renders correctly. Prefer this over illustration_svg.',
+          properties: {
+            kind:  { type: 'string', enum: ['before-after'] },
+            title: { type: 'string' },
+            left: {
+              type: 'object',
+              properties: {
+                shape: { type: 'string', enum: ['wedge', 'blob', 'sphere', 'chain', 'ring', 'box', 'drop', 'leaf'] },
+                color: { type: 'string', enum: ['yellow', 'red', 'blue', 'green', 'orange', 'pink', 'sky', 'brown', 'violet', 'cream'] },
+                label: { type: 'string' },
+                dots:  { type: 'integer', minimum: 0, maximum: 6 },
+              },
+            },
+            right: {
+              type: 'object',
+              properties: {
+                shape: { type: 'string', enum: ['wedge', 'blob', 'sphere', 'chain', 'ring', 'box', 'drop', 'leaf'] },
+                color: { type: 'string', enum: ['yellow', 'red', 'blue', 'green', 'orange', 'pink', 'sky', 'brown', 'violet', 'cream'] },
+                label: { type: 'string' },
+                dots:  { type: 'integer', minimum: 0, maximum: 6 },
+              },
+            },
+            arrow_label: { type: 'string' },
+          },
+        },
+        // Escape hatch: write SVG markup directly. Only when no template fits.
         illustration_svg: { type: 'string' },
         narration: {
           type: 'string',
