@@ -27,6 +27,7 @@ import {
   getActiveConnector, ask as connectorAsk, resolveDrawIllustrations,
 } from './connectors/index.js';
 import { LANGUAGES, resolveLanguage } from './connectors/system-prompt.js';
+import { discoverModels as discoverLMStudioModels } from './connectors/lmstudio.js';
 import {
   renderTemplate, isValidTemplate, buildFallbackTemplate,
   renderDraw, isValidDraw,
@@ -1224,12 +1225,16 @@ function rebuildSettingsContents() {
           <input id="settings-url-lmstudio" type="text" placeholder="http://localhost:1234/v1/chat/completions" value="${escapeAttr(settings.lmstudioUrl || '')}"/>
           <div class="settings-field__hint">point this at your LM Studio "Local Server" URL — usually <code>http://localhost:1234/v1/chat/completions</code></div>
           ${blocked ? lmstudioMixedContentHelp() : ''}
+          <div class="settings-lmstudio-models" id="settings-lmstudio-models" hidden></div>
         `;
         det.appendChild(wrap);
+        let urlDebounce;
         wrap.querySelector('input').addEventListener('input', (e) => {
           const s = loadSettings();
           s.lmstudioUrl = e.target.value;
           saveSettings(s);
+          clearTimeout(urlDebounce);
+          urlDebounce = setTimeout(refreshLMStudioModelPicker, 600);
         });
         // wire copy buttons inside the help block
         wrap.querySelectorAll('[data-copy]').forEach((b) => {
@@ -1239,6 +1244,9 @@ function rebuildSettingsContents() {
             catch {}
           });
         });
+        // silent first probe so the picker appears without making the
+        // visitor click "test connection" first.
+        if (!blocked) refreshLMStudioModelPicker();
       }
       // model picker
       if (conn.models?.length) {
@@ -1408,6 +1416,104 @@ async function renderStorageCard() {
   });
 }
 
+// Probe LM Studio for installed models, then render a picker into the
+// #settings-lmstudio-models slot. Called on settings-open, on URL edit
+// (debounced), and after the "test connection" button. If a test result
+// is passed in, we reuse it instead of re-probing.
+async function refreshLMStudioModelPicker(testResult) {
+  const host = $('settings-lmstudio-models');
+  if (!host) return;
+  const s = loadSettings();
+  const url = s.lmstudioUrl || 'http://localhost:1234/v1/chat/completions';
+
+  let models, canListDownloaded;
+  if (testResult && Array.isArray(testResult.models)) {
+    models            = testResult.models;
+    canListDownloaded = !!testResult.canListDownloaded;
+  } else {
+    host.hidden = false;
+    host.innerHTML = `<div class="settings-lmstudio-models__status">looking for models…</div>`;
+    let r;
+    try { r = await discoverLMStudioModels({ url }); }
+    catch (e) { r = { ok: false, error: e?.message || String(e) }; }
+    if (!r.ok) {
+      // Make failure visible instead of hiding silently — that's how
+      // "the dropdown isn't updating" used to look from the visitor's
+      // side. Show the error and a manual retry.
+      host.hidden = false;
+      host.innerHTML = `
+        <div class="settings-lmstudio-models__status">
+          couldn't fetch models — ${escapeHTML(r.error || 'unknown error')}
+          <button type="button" class="settings-lmstudio-models__refresh" data-act="refresh">↻ retry</button>
+        </div>`;
+      host.querySelector('[data-act="refresh"]')?.addEventListener('click', () => refreshLMStudioModelPicker());
+      return;
+    }
+    models            = r.models || [];
+    canListDownloaded = !!r.canListDownloaded;
+  }
+
+  const loaded     = models.filter(m => m.state === 'loaded');
+  const downloaded = models.filter(m => m.state !== 'loaded');
+
+  if (!models.length) {
+    host.hidden = false;
+    host.innerHTML = `
+      <div class="settings-lmstudio-models__status">
+        connected, but no models found — download one in LM Studio.
+        <button type="button" class="settings-lmstudio-models__refresh" data-act="refresh">↻ refresh</button>
+      </div>`;
+    host.querySelector('[data-act="refresh"]')?.addEventListener('click', () => refreshLMStudioModelPicker());
+    return;
+  }
+
+  // group: loaded first, then downloaded (JIT-loadable)
+  const optGroup = (label, list) => list.length ? `
+    <optgroup label="${escapeAttr(label)}">
+      ${list.map(m => `<option value="${escapeAttr(m.id)}"${s.models.lmstudio === m.id ? ' selected' : ''}>${escapeHTML(m.id)}${m.ctx ? ` · ${ctxLabel(m.ctx)}` : ''}${m.state === 'loaded' ? '' : ' · not loaded'}</option>`).join('')}
+    </optgroup>
+  ` : '';
+
+  // if the saved model isn't in the discovered list, reset so we don't
+  // ship a phantom id to /v1/chat/completions.
+  const allIds = models.map(m => m.id);
+  if (!s.models.lmstudio || !allIds.includes(s.models.lmstudio)) {
+    s.models.lmstudio = (loaded[0] || downloaded[0])?.id || '';
+    if (s.models.lmstudio) saveSettings(s);
+  }
+
+  host.hidden = false;
+  host.innerHTML = `
+    <div class="settings-lmstudio-models__row">
+      <label class="settings-lmstudio-models__label" for="settings-model-lmstudio">model</label>
+      <button type="button" class="settings-lmstudio-models__refresh" data-act="refresh" title="re-probe LM Studio">↻ refresh</button>
+    </div>
+    <select id="settings-model-lmstudio">
+      ${optGroup('loaded', loaded)}
+      ${optGroup(canListDownloaded ? 'downloaded — load on first ask' : 'downloaded', downloaded)}
+    </select>
+    <div class="settings-field__hint">
+      ${loaded.length
+        ? `${loaded.length} loaded${downloaded.length ? ` · ${downloaded.length} more on disk` : ''}`
+        : `nothing loaded yet — pick one above and LM Studio will load it on your first question.`}
+      ${!canListDownloaded ? ' <em>(LM Studio 0.3.6+ shows downloaded-but-unloaded models too)</em>' : ''}
+    </div>
+  `;
+  host.querySelector('[data-act="refresh"]')?.addEventListener('click', () => refreshLMStudioModelPicker());
+  host.querySelector('select')?.addEventListener('change', (e) => {
+    const cur = loadSettings();
+    cur.models.lmstudio = e.target.value;
+    saveSettings(cur);
+    refreshActiveBackendChip();
+  });
+}
+
+function ctxLabel(n) {
+  if (!n) return '';
+  if (n >= 1000) return `${Math.round(n / 1000)}k ctx`;
+  return `${n} ctx`;
+}
+
 // Inline help block shown when LM Studio is selected on the live (HTTPS)
 // site. The browser physically blocks https → http://localhost ("mixed
 // content") and there's no server-side fix — only the visitor can break
@@ -1575,6 +1681,7 @@ function setupSettings() {
     catch (e) { res = { ok: false, error: e.message || String(e) }; }
     if (res.ok) setStatus(res.info || 'connected', 'ok');
     else        setStatus(res.error || 'failed', 'error');
+    if (conn.id === 'lmstudio' && res.ok) refreshLMStudioModelPicker(res);
   });
 
   function setStatus(msg, kind) {

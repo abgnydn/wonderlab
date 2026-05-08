@@ -1765,6 +1765,51 @@
     font-style: italic;
   }
 
+  /* LM Studio model picker — appears below the URL once we can see models */
+  .settings-lmstudio-models {
+    margin-top: 0.55rem;
+    display: flex; flex-direction: column; gap: 0.3rem;
+  }
+  .settings-lmstudio-models__row {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  }
+  .settings-lmstudio-models__label {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.86rem;
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .settings-lmstudio-models select {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.92rem;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    padding: 0.45rem 0.65rem;
+    background: var(--cream);
+    color: var(--ink);
+  }
+  .settings-lmstudio-models__status {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    display: flex; align-items: center; gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .settings-lmstudio-models__refresh {
+    appearance: none;
+    background: white;
+    color: var(--ink);
+    border: 1.6px solid var(--ink);
+    border-radius: 999px;
+    padding: 0.18rem 0.55rem;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 0.72rem;
+    cursor: pointer;
+    box-shadow: 1px 1px 0 var(--ink);
+  }
+  .settings-lmstudio-models__refresh:hover { background: var(--sun); }
+
   .settings-toggle-row {
     display: flex; align-items: flex-start; gap: 0.7rem;
     cursor: pointer;
