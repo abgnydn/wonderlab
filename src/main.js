@@ -2085,14 +2085,41 @@ async function main() {
         const input = $('ask-input');
         if (input) input.placeholder = 'listening… speak your question';
       };
+      recog._lastError = null;
       recog.onerror = (e) => {
-        console.warn('speech recog error', e?.error);
+        recog._lastError = e?.error || 'unknown';
+        console.warn('speech recog error', recog._lastError);
       };
       recog.onend = () => {
         listening = false;
         micBtn.classList.remove('listening');
         const input = $('ask-input');
-        if (input) input.placeholder = 'ask anything you wonder about…';
+        if (!input) return;
+        // If recog ended due to an error, surface it in the placeholder
+        // for a few seconds. The most common one in Brave / non-Google
+        // builds is "network" or "service-not-allowed" — Web Speech routes
+        // to Google's STT and Brave blocks it for privacy.
+        const err = recog._lastError;
+        recog._lastError = null;
+        if (err) {
+          const isBrave = !!navigator.brave;
+          const msg = (err === 'network' || err === 'service-not-allowed')
+            ? (isBrave
+                ? 'voice blocked by Brave — enable “Google services for push messaging” in brave://settings/privacy, or type instead'
+                : 'voice service unreachable — check your connection or type instead')
+            : err === 'not-allowed'
+              ? 'mic permission denied — enable it in site settings'
+              : err === 'no-speech'
+                ? 'didn’t catch any speech — try again'
+                : `voice error (${err}) — type instead`;
+          input.placeholder = msg;
+          clearTimeout(recog._restoreT);
+          recog._restoreT = setTimeout(() => {
+            input.placeholder = 'ask anything you wonder about…';
+          }, 6000);
+        } else {
+          input.placeholder = 'ask anything you wonder about…';
+        }
       };
       recog.onresult = (e) => {
         let interim = '', final = '';
