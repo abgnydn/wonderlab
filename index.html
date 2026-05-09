@@ -2683,20 +2683,15 @@
   .touch-dpad {
     display: none;       /* shown only via the touch query below */
     position: fixed;
-    /* Top-left, just under the wordmark + room-sign. Old position
-       (bottom-left, above the chat input) put the cross on top of the
-       depth-knob row + follow-up suggestions. Bottom band is now
-       reserved for the answer/chat stack. */
-    top: 5.5rem;
-    bottom: auto;
+    bottom: 5.6rem;      /* sits just above the room-bottom container */
     left: 0.7rem;
     z-index: 6;
     grid-template-areas:
       ". up    ."
       "left jump right"
       ". down  .";
-    grid-template-columns: repeat(3, 44px);
-    grid-template-rows:    repeat(3, 44px);
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows:    repeat(3, 48px);
     gap: 4px;
     user-select: none;
     -webkit-user-select: none;
@@ -2748,17 +2743,15 @@
     #hover-tooltip { display: none !important; }
   }
 
-  /* on phones, shrink the d-pad cells a touch so the cross doesn't
-     eat too much of the upper-left corner. Arrows still visible — they
-     now live up under the wordmark, well clear of the answer card. */
+  /* on phones, shrink the d-pad cells so the cross doesn't crowd the
+     bottom-left corner. Stays bottom-left, just above the room-bottom. */
   @media (max-width: 699px) {
     .touch-dpad {
-      grid-template-columns: repeat(3, 38px);
-      grid-template-rows:    repeat(3, 38px);
+      grid-template-columns: repeat(3, 40px);
+      grid-template-rows:    repeat(3, 40px);
       gap: 3px;
-      top: 4.6rem;
     }
-    .touch-dpad__btn { font-size: 1.05rem; }
+    .touch-dpad__btn { font-size: 1.1rem; }
   }
 
   /* embed mode — ?embed=1 in the URL strips the chrome so wonderlab
