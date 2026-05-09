@@ -2488,6 +2488,25 @@
     /* aha popup compact and above the chat input on phones */
     #scene-aha { font-size: 0.9rem; padding: 0.5rem 0.7rem; max-width: 90%; top: auto; bottom: 5rem; transform: translate(-50%, 0.5rem); }
     #scene-aha.show { transform: translate(-50%, 0); }
+
+    /* room-bottom stacks tall on phones (depth-knob + follow-ups +
+       answer card + glossary + chat input). All those rows live above
+       the 3D scene, so canvas labels (the egg's "Cooked Egg" caption,
+       title text) leak through whenever a row has no fill. Wrap the
+       lot in a soft cream pad so the bottom band reads as one card. */
+    .room-bottom {
+      background: rgba(252, 246, 232, 0.86);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border-radius: 14px;
+      padding: 0.55rem 0.55rem 0.4rem;
+      gap: 0.45rem;
+      box-shadow: 0 -2px 10px rgba(45, 38, 34, 0.08);
+    }
+    /* tighten depth-knob + follow-up bubbles on phones so the stack
+       doesn't push the chat input off-screen */
+    .depth-knob { margin: 0; }
+    #follow-ups-strip { gap: 0.32rem; }
   }
 
   /* narrow phone — squeeze further */
@@ -2664,15 +2683,20 @@
   .touch-dpad {
     display: none;       /* shown only via the touch query below */
     position: fixed;
-    bottom: 5.6rem;
+    /* Top-left, just under the wordmark + room-sign. Old position
+       (bottom-left, above the chat input) put the cross on top of the
+       depth-knob row + follow-up suggestions. Bottom band is now
+       reserved for the answer/chat stack. */
+    top: 5.5rem;
+    bottom: auto;
     left: 0.7rem;
     z-index: 6;
     grid-template-areas:
       ". up    ."
       "left jump right"
       ". down  .";
-    grid-template-columns: repeat(3, 48px);
-    grid-template-rows:    repeat(3, 48px);
+    grid-template-columns: repeat(3, 44px);
+    grid-template-rows:    repeat(3, 44px);
     gap: 4px;
     user-select: none;
     -webkit-user-select: none;
@@ -2717,6 +2741,24 @@
     #ask-submit { padding: 0.55rem 1rem; font-size: 1rem; }
     #ask-input  { padding: 0.7rem 0.9rem; font-size: 16px; }   /* 16px = no iOS zoom */
     .controls-hint { display: none; }                          /* keyboard-only copy */
+    /* hover tooltip ("whiteboard", "iris", etc.) gets stuck after a tap
+       on touch — pointermove fires once with the kind, then there's no
+       hover-out to clear it. Suppress entirely; touch users don't have
+       hover affordance to begin with. */
+    #hover-tooltip { display: none !important; }
+  }
+
+  /* on phones, shrink the d-pad cells a touch so the cross doesn't
+     eat too much of the upper-left corner. Arrows still visible — they
+     now live up under the wordmark, well clear of the answer card. */
+  @media (max-width: 699px) {
+    .touch-dpad {
+      grid-template-columns: repeat(3, 38px);
+      grid-template-rows:    repeat(3, 38px);
+      gap: 3px;
+      top: 4.6rem;
+    }
+    .touch-dpad__btn { font-size: 1.05rem; }
   }
 
   /* embed mode — ?embed=1 in the URL strips the chrome so wonderlab
@@ -2859,17 +2901,19 @@
     color: var(--rose);
   }
 
-  /* public footer — bottom-right, tiny, never blocks the canvas */
+  /* public footer — top-right, beneath the panel-toggles row.
+     Vertically stacked column so the chips never crowd the canvas
+     bottom-band where the answer card + chat input live. */
   .public-footer {
     position: fixed;
-    bottom: 0.65rem;
+    top: 4rem;
     right: 0.85rem;
+    bottom: auto;
     z-index: 4;
     display: flex;
-    gap: 0.4rem;
-    align-items: center;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    flex-direction: column;
+    gap: 0.32rem;
+    align-items: flex-end;
     pointer-events: none;
   }
   .public-footer__chip {
@@ -2896,12 +2940,12 @@
   .public-footer__chip--meta    { background: rgba(255, 209, 107, 0.85); }
   .public-footer__chip--by      { background: rgba(248, 165, 194, 0.85); }
   .public-footer__chip--by:hover { background: var(--pink); }
-  /* tighter on mobile — the chat-input owns the bottom row */
+  /* tighter on mobile — chips column tucked under the panel-toggles */
   @media (max-width: 699px) {
     .public-footer {
-      bottom: 5.6rem;             /* above the chat input */
+      top: 3.7rem;
       right: 0.6rem;
-      gap: 0.3rem;
+      gap: 0.28rem;
     }
     .public-footer__chip { font-size: 0.66rem; padding: 0.18rem 0.5rem; }
   }
