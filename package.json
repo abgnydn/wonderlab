@@ -4,25 +4,31 @@
   "description": "A small lab room you walk into. Ask any question and a researcher answers in plain words while drawing on a 3D whiteboard. Translation-layer demo for Hugging Science benchmarks.",
   "type": "module",
   "private": true,
-  "license": "MIT",
+  "license": "Apache-2.0",
   "homepage": "https://the-wonderlab.pages.dev",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/abgnydn/wonderlab.git"
   },
   "scripts": {
-    "dev":            "node server/server.js",
-    "dev:static":     "npx -y http-server@14 -p 5173 -c-1 .",
-    "build":          "node scripts/build.mjs",
-    "deploy":         "npm run build && wrangler pages deploy public --project-name the-wonderlab --branch main",
-    "deploy:preview": "npm run build && wrangler pages deploy public --project-name the-wonderlab",
-    "og":             "rsvg-convert -w 1200 -h 630 og.svg -o og.png"
+    "dev":             "node server/server.js",
+    "dev:static":      "npx -y http-server@14 -p 5173 -c-1 .",
+    "build":           "node scripts/build.mjs",
+    "deploy":          "npm run build && wrangler pages deploy public --project-name the-wonderlab --branch main",
+    "deploy:preview":  "npm run build && wrangler pages deploy public --project-name the-wonderlab",
+    "og":              "rsvg-convert -w 1200 -h 630 og.svg -o og.png",
+    "test":            "node --test 'tests/unit/**/*.test.js'",
+    "test:unit":       "node --test 'tests/unit/**/*.test.js'",
+    "test:e2e":        "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui":     "playwright test --ui"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
-    "wrangler": "^3.95.0"
+    "@playwright/test": "^1.49.0",
+    "wrangler":         "^3.95.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0"

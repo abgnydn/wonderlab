@@ -6,15 +6,23 @@
 // them to.
 // =============================================================
 
-import { claudeConnector }      from './claude.js';
-import { geminiConnector }      from './gemini.js';
-import { webllmConnector }      from './webllm.js';
-import { lmstudioConnector }    from './lmstudio.js';
-import { localServerConnector } from './local-server.js';
+import { claudeConnector }       from './claude.js';
+import { geminiConnector }       from './gemini.js';
+import { gemmaConnector }        from './gemma.js';
+import { transformersConnector } from './transformers.js';
+import { webllmConnector }       from './webllm.js';
+import { lmstudioConnector }     from './lmstudio.js';
+import { localServerConnector }  from './local-server.js';
 
+// Order in this object drives the order in the settings picker.
+// Gemma 4 (cloud) is first as the recommended default; the in-browser
+// Transformers.js path is second so the "100% local, no key" option
+// is visible right under it for the Digital Equity story.
 export const CONNECTORS = {
-  claude:        claudeConnector,
+  gemma:         gemmaConnector,
+  transformers:  transformersConnector,
   gemini:        geminiConnector,
+  claude:        claudeConnector,
   webllm:        webllmConnector,
   lmstudio:      lmstudioConnector,
   'local-server': localServerConnector,

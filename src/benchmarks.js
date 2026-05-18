@@ -13,8 +13,10 @@
 // =============================================================
 
 // First match wins, so order MOST-SPECIFIC → least. The Hugging
-// Science org page is a strong fallback, so anything science-flavored
-// that we don't recognize specifically still routes somewhere real.
+// Science home (huggingscience.co) is a strong fallback — anything
+// science-flavored that we don't recognize specifically still routes
+// somewhere real. (Their HF org page huggingface.co/hugging-science
+// works too, but huggingscience.co is the canonical public home.)
 const ENTRIES = [
   // ── Hugging Science specific themes ─────────────────────────
   // Their org launched with: protein stability, antibody devel.,
@@ -23,17 +25,17 @@ const ENTRIES = [
   { match: /protein.?stab|protein.?fold|protein.?struct|stability/i,
     label: 'Hugging Science · protein stability',
     note:  'open scientific challenge — train a model to predict how stable a protein stays as it folds and unfolds',
-    url:   'https://huggingface.co/Hugging-Science' },
+    url:   'https://huggingscience.co/' },
 
   { match: /antibod|developability|immunogenic/i,
     label: 'Hugging Science · antibody developability',
     note:  'predict whether a candidate antibody will behave well in the lab and the body',
-    url:   'https://huggingface.co/Hugging-Science' },
+    url:   'https://huggingscience.co/' },
 
   { match: /stellarator|tokamak|fusion|plasma.?confine/i,
     label: 'Hugging Science · fusion / stellarator',
     note:  'help shape the magnetic trap that holds super-hot fuel for fusion energy',
-    url:   'https://huggingface.co/Hugging-Science' },
+    url:   'https://huggingscience.co/' },
 
   // Sub-area of Hugging Science but with its own first-class home.
   { match: /alphafold|protein.?structure.?predict/i,
@@ -50,7 +52,7 @@ const ENTRIES = [
   { match: /hugging.?science|hf.?science|hugscience/i,
     label: 'Hugging Science',
     note:  "Hugging Face's open-science hub — datasets, models, and benchmarks for real research questions",
-    url:   'https://huggingface.co/Hugging-Science' },
+    url:   'https://huggingscience.co/' },
 
   // ── Therapeutic Data Commons ────────────────────────────────
   // Has named sub-tasks (ADMET, DTI, etc.) we could deep-link, but
@@ -78,9 +80,9 @@ const ENTRIES = [
 
   // ── Climate / earth ─────────────────────────────────────────
   { match: /climate.?bench|weather.?bench|chaosbench/i,
-    label: 'WeatherBench / ClimateBench',
-    note:  'forecast benchmarks the climate-ML community uses to compare models',
-    url:   'https://huggingface.co/datasets?search=weatherbench' },
+    label: 'Hugging Science · climate / weather',
+    note:  'open scientific challenge — forecast the climate-Earth system; multi-scale coupling is one of Hugging Science\'s named upstream bottlenecks',
+    url:   'https://huggingscience.co/' },
 
   // ── Astronomy / physics ─────────────────────────────────────
   { match: /\bsdss\b|sloan.?digital/i,
@@ -131,12 +133,14 @@ export function resolveBenchmark(name) {
       return { label: e.label, url: e.url, note: e.note || '', raw: trimmed };
     }
   }
-  // unmapped — return the raw name with a search URL so the link still works
-  const q = encodeURIComponent(trimmed + ' benchmark');
+  // Unmapped — route to Hugging Science. That's wonderlab's pitch:
+  // every question lands at the open-science community working on it,
+  // not at a generic HF catalogue search. The chip keeps iris's raw
+  // benchmark name as the label so the visitor sees what *she* meant.
   return {
     label: trimmed,
-    url:   `https://huggingface.co/datasets?search=${q}`,
-    note:  '',
+    url:   'https://huggingscience.co/',
+    note:  'open scientific direction — explore at huggingscience.co',
     raw:   trimmed,
   };
 }

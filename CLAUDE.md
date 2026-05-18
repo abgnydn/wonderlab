@@ -2,6 +2,26 @@
 
 Handoff context for picking this up in a fresh chat.
 
+## Active context (2026-05-13)
+
+**Submitting to the [Gemma 4 Good Hackathon](https://www.kaggle.com/competitions/gemma-4-good-hackathon)** (Kaggle × Google DeepMind, deadline 2026-05-18, $200K pool, **Apache 2.0** submission license). Tracks: Future of Education + Digital Equity. The pitch is unchanged — translation layer — and Gemma 4 is the headline model. Recent landing changes:
+
+- License moved MIT → Apache 2.0.
+- New `connectors/gemma.js` — Google AI Studio, only Gemma 4 model IDs, uses **native function calling** (`render_scene` tool) via the native Gemini endpoint (`:streamGenerateContent`). NOT the OpenAI-compat shim — that returns 500 for Gemma model IDs.
+- New `connectors/transformers.js` — Gemma 4 E2B / E4B in-browser via Transformers.js + WebGPU (ONNX from `onnx-community/gemma-4-E2B-it-ONNX`). No key, no server. **Marked experimental** because the ONNX external-weight blobs are ~3.6 GB and Chrome's default origin quota is 2 GB; the connector runs `navigator.storage.estimate()` first and bails with a clear error if the user's quota is too small. Don't pitch this path on download size.
+- New `connectors/scene-schema.js` — single source of the SceneSpec schema, mirrored from `server/server.js` and trimmed for Gemini function-calling (no `type: [..., 'null']` — uses `nullable: true`).
+- `connectors/index.js` lists `gemma` → `transformers` → … so the "cloud Gemma 4" and "browser Gemma 4" rows sit together at the top.
+- `device-detect.js → recommend()` defaults to `gemma` for every tier; WebLLM stays a manual choice.
+- `system-prompt.txt` reframed around **Johnstone's triplet** (big picture / inside picture / word picture) and **Chi's self-explanation** (`follow_ups` are predictions, not topic branches).
+- README has a new `## How it teaches` section citing the academic foundations.
+- Landing got a `Gemma 4 · open weights · free` chip as the first model row.
+
+Not yet done (in priority order):
+1. Image-input demo (Gemma 4 is multimodal; "kid draws → Iris reacts") — biggest visible "we use Gemma 4's multimodal hook" win.
+2. Submission video (60–90s, end-to-end on Gemma 4).
+3. Sync the SceneSpec schema between `server/server.js` and `connectors/scene-schema.js` — currently mirrored by hand, will drift.
+4. (Stretch) Apply native function calling to the local-server path too, so the CLI route shows the same "uses Gemma 4 properly" story.
+
 ## What this is, in one breath
 
 A small lab room you walk into. A researcher (Claude, prompted to read who's talking and reply at their level) waits at a whiteboard. The visitor types any question or pulls one off the corkboard of real researcher questions. The researcher answers in plain language, draws what they're describing live in a 3D scene on the whiteboard, and tags the question against an open scientific question worth a real attempt.
@@ -32,6 +52,12 @@ three.js carries the visualization. The renderer is the SceneSpec → three.js l
 /server/character.md              — the SOUL: who the researcher is (Feynman/Pólya/Sagan/Montessori synthesis)
 /server/system-prompt.txt         — the CONTRACT: schema, banned words, visual palette, worked examples
 /src/main.js                      — boots scene, hydrates corkboard, wires chat→/api/ask
+/src/connectors/gemma.js          — Gemma 4 via Google AI Studio (default backend, Apache-2.0 model)
+/src/connectors/gemini.js         — Gemini via Google AI Studio
+/src/connectors/claude.js         — Claude via Anthropic API
+/src/connectors/webllm.js         — in-browser WebLLM (no Gemma 4 yet; tracking mlc-ai/web-llm#810)
+/src/connectors/lmstudio.js       — LM Studio localhost
+/src/connectors/local-server.js   — Node dev server using Claude Code CLI auth
 /src/lab-scene.js                 — OUTER 3D world: floor, walls, desk, 3D researcher, whiteboard plane. Owns the renderer + the animation loop. The whiteboard's texture comes from a render-to-target pass of src/scene.js
 /src/scene.js                     — INNER scene: macro/micro layers, zoom blend, slider. Renders to a WebGLRenderTarget (no own renderer; driven by lab-scene)
 /src/macro.js                     — cartoon shapes (wedge, blob)

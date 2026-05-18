@@ -2743,10 +2743,16 @@
     #hover-tooltip { display: none !important; }
   }
 
-  /* on phones, shrink the d-pad cells so the cross doesn't crowd the
-     bottom-left corner. Stays bottom-left, just above the room-bottom. */
+  /* On phones the bottom half of the screen is fully claimed by the
+     answer card + follow-up chips + chat input + glossary + research
+     tie-in. The walk-around d-pad has nowhere honest to sit, so it
+     ends up overlapping content (see screenshot bug 2026-05-19).
+     Hide it on phones — touch-drag on the 3D scene still works for
+     looking around. Tablets and bigger touch devices keep it.
+     (We leave the cell-size rule in place in case we re-enable.) */
   @media (max-width: 699px) {
     .touch-dpad {
+      display: none !important;
       grid-template-columns: repeat(3, 40px);
       grid-template-rows:    repeat(3, 40px);
       gap: 3px;

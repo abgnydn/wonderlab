@@ -16,20 +16,33 @@ follow-up reply or DM if she asks.
 
 ## Option A — short, in his voice (recommended for the comment thread)
 
-> hey Georgia — built a small thing called wonderlab.
+> hey Georgia — built the thing. called it wonderlab.
 >
-> a 3D lab room. a researcher waits at a whiteboard. you ask anything
-> ("why does cheese melt?", "how does a magnet work?") and she answers
-> in plain words while drawing it live on the whiteboard, then tags it
-> against an open scientific question + the closest Hugging Science /
-> TDC benchmark. share button gives you a card with the kid version on
+> a 3D lab room. a researcher (iris) waits at a whiteboard. you ask
+> anything — "why does cheese melt?", "how does a magnet work?" — and
+> she answers in plain words while drawing it live on the whiteboard,
+> then tags it against an open scientific question + the closest
+> Hugging Science / TDC benchmark. share card has the kid version on
 > top and "how researchers say it →" on the back.
 >
 > it's a translation layer. kid words on the front, real research on
 > the back. the 5yo is the stress test, not the user base — anyone
-> non-expert with intuition is the actual user.
+> non-expert with intuition is the real user.
 >
-> can DM you a link if useful.
+> runs on Gemma 4, Apache 2.0, no server — your key (when you need
+> one) stays in your browser. submitted to the Gemma 4 Good hackathon
+> under Future of Education. happy to DM the link.
+
+---
+
+## Option A-mini — bare-bones single paragraph (if the thread is short)
+
+> hey Georgia — wonderlab is what i ended up building. 3D lab room,
+> researcher at a whiteboard, you ask anything and she answers in kid
+> words while drawing it, then tags the closest Hugging Science / TDC
+> open challenge. translation layer — kid words on the front, real
+> research on the back. runs on Gemma 4 (Apache 2.0), no server. DM
+> me if you want a link.
 
 ---
 

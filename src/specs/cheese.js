@@ -126,19 +126,25 @@ export function makeWelcomeSpec(name = '', lastQuestion = '') {
 }
 
 // Sticky note in the lower-left that says "last time we wondered about X".
-// Tilted -3°, sun-yellow, taped on. Truncates the question to ~60 chars
-// so the SVG doesn't blow out.
+// Tilted -3°, sun-yellow, taped on. Truncates the question and uses SVG
+// textLength so even an over-long sentence compresses to fit the sticky
+// width instead of spilling past the right edge.
 function renderMemorySticky(question) {
-  const trim = String(question).length > 60
-    ? String(question).slice(0, 57) + '…'
+  const STICKY_W = 360;
+  const STICKY_H = 100;
+  const PAD = 20;
+  const INNER_W = STICKY_W - PAD * 2;       // text box width inside the sticky
+  const trim = String(question).length > 50
+    ? String(question).slice(0, 47) + '…'
     : String(question);
   return `
     <g transform="translate(70 360) rotate(-3)">
-      <rect width="280" height="100" fill="rgba(45,38,34,0.18)"/>
-      <rect width="280" height="100" fill="#FFE4A8" stroke="#2D2622" stroke-width="2.5"/>
-      <rect x="100" y="-12" width="80" height="22" fill="rgba(124,183,208,0.65)"/>
-      <text x="20" y="34" font-family="Caveat,cursive" font-weight="700" font-size="24" fill="#2D2622">last time we wondered:</text>
-      <text x="20" y="68" font-family="Fredoka,sans-serif" font-weight="600" font-size="18" fill="#5C4A3F">"${escapeXml(trim)}"</text>
+      <rect width="${STICKY_W}" height="${STICKY_H}" fill="rgba(45,38,34,0.18)"/>
+      <rect width="${STICKY_W}" height="${STICKY_H}" fill="#FFE4A8" stroke="#2D2622" stroke-width="2.5"/>
+      <rect x="${(STICKY_W - 80) / 2}" y="-12" width="80" height="22" fill="rgba(124,183,208,0.65)"/>
+      <text x="${PAD}" y="38" font-family="Caveat,cursive" font-weight="700" font-size="24" fill="#2D2622">last time we wondered:</text>
+      <text x="${PAD}" y="72" font-family="Fredoka,sans-serif" font-weight="600" font-size="17" fill="#5C4A3F"
+            textLength="${INNER_W}" lengthAdjust="spacingAndGlyphs">"${escapeXml(trim)}"</text>
     </g>
   `;
 }

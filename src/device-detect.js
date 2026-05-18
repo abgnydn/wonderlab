@@ -118,36 +118,40 @@ export const WEBLLM_MODELS = [
 ];
 
 export function recommend(caps) {
-  // No WebGPU at all → must go cloud
+  // Default recommendation is Gemma 4 31B on AI Studio: open weights
+  // (Apache 2.0), multimodal, native function calling, free tier with
+  // no card. The SVG-drawing quality on 31B beats any browser-runnable
+  // model, and the user keeps full optionality — WebLLM and LM Studio
+  // stay one click away for offline use.
+  //
+  // No WebGPU at all → cloud is the only path anyway.
   if (caps.tier === 'cloud-only') {
     return {
-      backend: 'gemini',                  // Gemini has a generous free tier with no card
+      backend: 'gemma',
       reason:  caps.webgpu.supported
-        ? 'your browser only offers a fallback GPU — cloud will be much faster + cleaner'
-        : 'WebGPU isn\'t available in this browser — cloud is the only path',
+        ? 'your browser only offers a fallback GPU — Gemma 4 31B in the cloud is the cleanest path'
+        : 'WebGPU isn\'t available here — Gemma 4 31B on AI Studio (free, no card) is the cleanest path',
       drawIllustrations: true,
       webllmModel: null,
     };
   }
 
-  // For SVG-quality, even small browser models struggle. If draw-illustrations is
-  // the priority, suggest cloud. We surface BOTH: WebLLM for text, cloud for image.
-  const modelByTier = {
-    low:  'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
-    mid:  'Llama-3.2-1B-Instruct-q4f16_1-MLC',
-    high: 'Llama-3.2-3B-Instruct-q4f16_1-MLC',
-  };
+  // WebGPU is here, so the user could run a model in-browser — but
+  // the best-quality answer with full SVG illustration still comes
+  // from Gemma 4 31B on AI Studio. Offer that as the recommendation;
+  // surface WebLLM as the secondary "fully offline" option via the
+  // picker.
   const reasonByTier = {
-    low:  'tight resources detected — a tiny model keeps things responsive',
-    mid:  'a 1B model fits comfortably on this machine; first-time download ~880MB then cached',
-    high: 'this machine can run a 3B model in-browser — best browser-only quality',
+    low:  'Gemma 4 31B on AI Studio (free, no card) gives a far cleaner answer than what fits on this machine',
+    mid:  'Gemma 4 31B on AI Studio (free, no card) — best quality; or pick WebLLM below to stay fully offline',
+    high: 'Gemma 4 31B on AI Studio (free, no card) — best quality; this machine can also run WebLLM offline',
   };
 
   return {
-    backend: 'webllm',
-    reason:  reasonByTier[caps.tier],
-    drawIllustrations: false,             // browser models aren't great at SVG; default off
-    webllmModel: modelByTier[caps.tier],
+    backend: 'gemma',
+    reason:  reasonByTier[caps.tier] || reasonByTier.mid,
+    drawIllustrations: true,
+    webllmModel: null,
   };
 }
 
