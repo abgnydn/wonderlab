@@ -40,9 +40,9 @@ with intuition.
 
 - **Front**: a 3D lab room (three.js) with a researcher (Iris) at a
   whiteboard. Type a question or click a sticky-note from the corkboard.
-- **Back**: an LLM produces a `SceneSpec` — a plain-words reply, a kid
-  answer, a hand-coded SVG for the whiteboard, and a real open-scientific
-  tie-in.
+- **Back**: **Gemma 4** (open-weight, Apache 2.0) produces a `SceneSpec`
+  — a plain-words reply, a kid answer, whiteboard drawing commands, and
+  a real open-scientific tie-in. Same browser, no server in between.
 - **Translation rule**: every visible field is plain words.
   The technical version lives behind a *"how researchers say it →"*
   reveal on the share card.
@@ -54,7 +54,7 @@ science-communication and educational-psychology literature, restated
 in kid-words inside Iris's brief:
 
 - **[Johnstone's triplet](https://edu.rsc.org/feature/improve-students-understanding-with-johnstones-triangle/4019740.article)**
-  (Johnstone 1982) — every illustration coordinates *three layers*:
+  (Johnstone 1991) — every illustration coordinates *three layers*:
   the **big picture** (body shapes — what the thing *is*), the
   **inside picture** (state primitives — *why* it behaves that way),
   and a **word picture** (a name, a number, a tiny formula). Most
@@ -79,6 +79,31 @@ The constraint is not visual rigidity — it's cognitive coordination.
 Iris stays free to choose any content; the structure she chooses for
 *how* to present it is what the research says novices need.
 
+Full citations live in the [References](#references) section.
+
+## Honest status (2026-05)
+
+A few dated notes so future readers know what's actually wired:
+
+- **Schema enforcement.** The SceneSpec contract is currently held by
+  Gemma 4's instruction-following — i.e., the system prompt defines the
+  JSON shape and Gemma 4 emits it in one shot. We *did* implement
+  `responseSchema` + native function calling, but Google AI Studio
+  returns HTTP 500 INTERNAL for any Gemma-4 request that includes
+  `responseMimeType: 'application/json'`, `responseSchema`, or `tools`
+  — even minimal valid schemas (verified via curl, 2026-05-15). The
+  schema lives at `src/connectors/scene-schema.js` and is ready to plug
+  back in when those endpoints stabilize for Gemma models.
+- **Inference flakiness.** Gemma 4 31B's inference endpoint on AI
+  Studio intermittently 500s. The gemma connector retries up to 3×
+  with exponential backoff before surfacing an error and hinting at
+  the 26B-A4B fallback or Gemini.
+- **In-browser Gemma 4 path.** Experimental. ONNX external-weight
+  blobs are multi-GB and exceed Chrome's default 2 GB per-origin
+  storage quota, so the connector runs a `navigator.storage.estimate()`
+  preflight and bails with a clear "switch to AI Studio or LM Studio"
+  message instead of crashing mid-download.
+
 ## What runs where
 
 wonderlab is **100% static**. There is no server. Every model call goes
@@ -89,18 +114,20 @@ The settings panel (⚙ in the top bar) lets you pick:
 
 | backend | runs where | needs key | first-use cost |
 |---|---|---|---|
-| **Gemma 4 (AI Studio)** ⭐ | Google AI Studio (free tier) | yes (free, no card) | a few requests/min — recommended default |
+| **Gemma 4 (AI Studio)** ⭐ | Google AI Studio (free tier) | yes (free, no card) | recommended default · 31B / 26B-A4B / E4B / E2B selectable |
+| **Gemma 4 (Transformers.js)** | your browser, on your GPU | no | experimental — multi-GB ONNX download |
 | **Gemini** | Google AI Studio (free tier) | yes (free, no card) | same key as Gemma 4 |
-| **Claude** | Anthropic API | yes (paid) | best illustration quality |
-| **WebLLM** | your browser, on your GPU | no | one-time ~900MB–2.5GB model download |
+| **Claude** | Anthropic API | yes (paid) | best SVG quality |
+| **WebLLM** | your browser, on your GPU | no | one-time model download |
 | **LM Studio** | your localhost | no | run wonderlab locally too |
 | **local dev server** | optional Node server, uses Claude Code CLI auth | no | dev only |
 
 The settings panel auto-detects your device (WebGPU? RAM? connection
-speed?) and recommends **Gemma 4 31B** by default — it's open-weight
-(Apache 2.0), multimodal, has native function calling, and runs free
-on AI Studio. WebLLM stays one click away if you'd rather run fully
-offline in your browser.
+speed?) and recommends **Gemma 4 31B** by default — open-weight
+(Apache 2.0), multimodal, runs free on AI Studio. LM Studio stays
+one click away if you'd rather run Gemma 4 fully offline; the
+Transformers.js path is there for sufficiently-equipped devices that
+want to skip the cloud entirely (with the storage-quota caveats above).
 
 ## Quick start (developing)
 
@@ -156,8 +183,12 @@ See `CLAUDE.md` for the full contract + handoff context.
   CSS, and JavaScript.
 - Your API key is stored in `localStorage` in your own browser.
 - Each question goes from your browser **directly** to the provider you
-  selected (`api.anthropic.com`, `generativelanguage.googleapis.com`,
-  WebLLM in-browser, or your local LM Studio).
+  selected (`generativelanguage.googleapis.com` for Gemma 4 / Gemini,
+  `api.anthropic.com` for Claude, your local LM Studio, or no network
+  at all for WebLLM / Transformers.js).
+- The Transformers.js path downloads ONNX shards from Hugging Face
+  (`huggingface.co/onnx-community/…`) into your browser's OPFS on first
+  use, then runs inference entirely on your own GPU.
 - We don't analytics-track question text or replies.
 
 If you fork the repo and run your own deploy, the same is true of *that*
